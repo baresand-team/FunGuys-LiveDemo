@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Dashboard - Monitoreo de Hongos</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -11,7 +14,7 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1><i class="fas fa-mushroom"></i> Dashboard de Monitoreo - Cultivo de Hongos</h1>
+            <h1><i class="fas fa-mushroom"></i> <span class="title-text">Dashboard de Monitoreo - Cultivo de Hongos</span></h1>
             <div class="header-info">
                 <span class="status-indicator online">
                     <i class="fas fa-circle"></i> Sistema Activo
@@ -142,7 +145,13 @@
 
             <!-- Alertas y Notificaciones -->
             <section class="alerts-section">
-                <h2><i class="fas fa-exclamation-triangle"></i> Alertas y Notificaciones</h2>
+                <div class="alerts-header">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Alertas y Notificaciones</h2>
+                    <a href="https://www.instagram.com/funguys.arg/?hl=es-la" target="_blank" class="instagram-btn">
+                        <i class="fab fa-instagram"></i>
+                        Seguí a FunGuys!
+                    </a>
+                </div>
                 <div class="alerts-container" id="alertsContainer">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>

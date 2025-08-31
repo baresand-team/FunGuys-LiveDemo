@@ -80,7 +80,7 @@ body {
 /* Grid de sensores */
 .sensors-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
 }
 
@@ -94,6 +94,9 @@ body {
     align-items: center;
     gap: 20px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
 }
 
 .sensor-card:hover {
@@ -176,7 +179,7 @@ body {
 
 .actuators-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
 }
 
@@ -231,6 +234,26 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 0.9rem;
+    min-height: 44px; /* Para mejor accesibilidad táctil */
+    touch-action: manipulation; /* Optimiza para pantallas táctiles */
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover {
+        transform: none;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .sensor-card:hover {
+        transform: none;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .instagram-btn:hover {
+        transform: none;
+        box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3);
+    }
 }
 
 .btn-primary {
@@ -292,17 +315,51 @@ body {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
+.alerts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
 .alerts-section h2 {
     color: #2c3e50;
-    margin-bottom: 25px;
     font-size: 1.5rem;
     display: flex;
     align-items: center;
     gap: 12px;
+    margin: 0;
 }
 
 .alerts-section h2 i {
     color: #8e44ad;
+}
+
+.instagram-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3);
+}
+
+.instagram-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 39, 67, 0.4);
+    color: white;
+}
+
+.instagram-btn i {
+    font-size: 1.2rem;
 }
 
 .alert {
@@ -347,54 +404,621 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+    .container {
+        padding: 18px;
+    }
+    
+    .sensors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    
+    .actuators-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 15px;
+    }
+}
+
+@media (max-width: 1024px) {
     .container {
         padding: 15px;
+    }
+    
+    .sensors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+    }
+    
+    .actuators-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    .container {
+        padding: 12px;
+    }
+    
+    .sensors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+    
+    .actuators-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+    }
+    
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
     }
     
     .header {
         flex-direction: column;
         gap: 20px;
         text-align: center;
+        padding: 20px 25px;
     }
     
     .header h1 {
         font-size: 1.8rem;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .title-text {
+        font-size: 1.6rem;
+    }
+    
+    .header-info {
+        align-items: center;
     }
     
     .sensors-grid {
         grid-template-columns: 1fr;
-    }
-    
-    .actuators-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .charts-container {
-        grid-template-columns: 1fr;
+        gap: 16px;
+        max-width: 100%;
     }
     
     .sensor-card {
         flex-direction: column;
         text-align: center;
+        padding: 18px;
+        gap: 15px;
+        width: 100%;
+        max-width: 100%;
     }
     
-    .sensor-chart {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .header h1 {
-        font-size: 1.5rem;
+    .sensor-icon {
+        width: 65px;
+        height: 65px;
+        font-size: 1.6rem;
     }
     
     .sensor-value {
         font-size: 2rem;
     }
     
+    .sensor-chart {
+        display: none;
+    }
+    
+    .actuators-section {
+        padding: 22px;
+    }
+    
+    .actuators-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    
+    .actuator-card {
+        padding: 16px;
+    }
+    
+    .trends-section {
+        padding: 22px;
+    }
+    
+    .chart-card {
+        padding: 14px;
+    }
+    
+    .alerts-section {
+        padding: 22px;
+    }
+    
+    .alerts-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .instagram-btn {
+        align-self: center;
+        padding: 10px 18px;
+        font-size: 0.85rem;
+    }
+    
+    .dashboard {
+        gap: 22px;
+    }
+}
+
+/* Breakpoint específico para móviles medianos (S20 Ultra, iPhone 14 Pro Max) */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header {
+        padding: 18px 20px;
+        margin-bottom: 18px;
+    }
+    
+    .header h1 {
+        font-size: 1.6rem;
+    }
+    
+    .title-text {
+        font-size: 1.4rem;
+    }
+    
+    .sensors-grid {
+        gap: 14px;
+    }
+    
+    .sensor-card {
+        padding: 16px 14px;
+        border-radius: 16px;
+    }
+    
+    .sensor-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .sensor-info h3 {
+        font-size: 1rem;
+    }
+    
+    .sensor-value {
+        font-size: 1.8rem;
+    }
+    
+    .sensor-status {
+        font-size: 0.8rem;
+    }
+    
+    .actuators-section,
+    .trends-section,
+    .alerts-section {
+        padding: 20px;
+        border-radius: 16px;
+    }
+    
+    .actuators-section h2,
+    .trends-section h2,
+    .alerts-section h2 {
+        font-size: 1.3rem;
+        margin-bottom: 18px;
+    }
+    
+    .actuator-card {
+        padding: 15px;
+        border-radius: 12px;
+    }
+    
+    .actuator-header h3 {
+        font-size: 1rem;
+    }
+    
+    .actuator-status {
+        font-size: 0.8rem;
+    }
+    
     .btn {
         padding: 8px 16px;
+        font-size: 0.85rem;
+        min-height: 42px;
+    }
+    
+    .chart-card {
+        padding: 12px;
+        border-radius: 12px;
+    }
+    
+    .chart-card h3 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+    
+    .instagram-btn {
+        padding: 8px 16px;
         font-size: 0.8rem;
+        border-radius: 20px;
+    }
+    
+    .instagram-btn i {
+        font-size: 1rem;
+    }
+    
+    .alert {
+        padding: 12px 16px;
+        font-size: 0.9rem;
+        border-radius: 8px;
+    }
+    
+    .dashboard {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 8px;
+    }
+    
+    .header {
+        padding: 16px 18px;
+        margin-bottom: 18px;
+    }
+    
+    .header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .title-text {
+        font-size: 1.2rem;
+    }
+    
+    .header-info {
+        gap: 8px;
+    }
+    
+    .status-indicator {
+        font-size: 0.75rem;
+    }
+    
+    .last-update {
+        font-size: 0.7rem;
+    }
+    
+    .sensors-grid {
+        gap: 12px;
+        padding: 0 4px;
+    }
+    
+    .sensor-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .sensor-icon {
+        width: 52px;
+        height: 52px;
+        font-size: 1.3rem;
+    }
+    
+    .sensor-info h3 {
+        font-size: 0.9rem;
+    }
+    
+    .sensor-value {
+        font-size: 1.5rem;
+    }
+    
+    .sensor-status {
+        font-size: 0.7rem;
+    }
+    
+    .actuators-section,
+    .trends-section,
+    .alerts-section {
+        padding: 16px;
+        border-radius: 14px;
+    }
+    
+    .actuators-section h2,
+    .trends-section h2,
+    .alerts-section h2 {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+    }
+    
+    .actuator-card {
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    .actuator-header h3 {
+        font-size: 0.9rem;
+    }
+    
+    .actuator-status {
+        font-size: 0.7rem;
+    }
+    
+    .btn {
+        padding: 7px 12px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        min-height: 38px;
+    }
+    
+    .chart-card {
+        padding: 10px;
+        border-radius: 10px;
+    }
+    
+    .chart-card h3 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    
+    .instagram-btn {
+        padding: 7px 14px;
+        font-size: 0.75rem;
+        border-radius: 18px;
+    }
+    
+    .instagram-btn i {
+        font-size: 0.9rem;
+    }
+    
+    .alert {
+        padding: 10px 14px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+    }
+    
+    .dashboard {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .container {
+        padding: 6px;
+    }
+    
+    .header {
+        padding: 15px 16px;
+        margin-bottom: 15px;
+    }
+    
+    .header h1 {
+        font-size: 1.1rem;
+    }
+    
+    .title-text {
+        font-size: 1rem;
+    }
+    
+    .sensors-grid {
+        gap: 10px;
+        padding: 0 3px;
+    }
+    
+    .sensor-card {
+        padding: 14px 10px;
+        border-radius: 12px;
+    }
+    
+    .sensor-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .sensor-info h3 {
+        font-size: 0.9rem;
+    }
+    
+    .sensor-value {
+        font-size: 1.4rem;
+    }
+    
+    .sensor-status {
+        font-size: 0.7rem;
+    }
+    
+    .actuators-section,
+    .trends-section,
+    .alerts-section {
+        padding: 16px;
+        border-radius: 12px;
+    }
+    
+    .actuators-section h2,
+    .trends-section h2,
+    .alerts-section h2 {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+    }
+    
+    .actuator-card {
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    .actuator-header h3 {
+        font-size: 0.9rem;
+    }
+    
+    .actuator-status {
+        font-size: 0.7rem;
+    }
+    
+    .btn {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+        min-height: 36px;
+        border-radius: 5px;
+    }
+    
+    .chart-card {
+        padding: 10px;
+        border-radius: 10px;
+    }
+    
+    .chart-card h3 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    
+    .instagram-btn {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+        border-radius: 18px;
+    }
+    
+    .instagram-btn i {
+        font-size: 0.9rem;
+    }
+    
+    .alert {
+        padding: 10px 14px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+    }
+    
+    .dashboard {
+        gap: 15px;
+    }
+}
+
+/* Breakpoint adicional para pantallas muy pequeñas */
+@media (max-width: 320px) {
+    .container {
+        padding: 4px;
+    }
+    
+    .header {
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    
+    .header h1 {
+        font-size: 1rem;
+    }
+    
+    .title-text {
+        font-size: 0.9rem;
+    }
+    
+    .sensors-grid {
+        gap: 8px;
+        padding: 0 2px;
+    }
+    
+    .sensor-card {
+        padding: 12px 8px;
+        border-radius: 10px;
+    }
+    
+    .sensor-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+    
+    .sensor-info h3 {
+        font-size: 0.85rem;
+    }
+    
+    .sensor-value {
+        font-size: 1.3rem;
+    }
+    
+    .sensor-status {
+        font-size: 0.65rem;
+    }
+    
+    .actuators-section,
+    .trends-section,
+    .alerts-section {
+        padding: 14px;
+        border-radius: 10px;
+    }
+    
+    .actuators-section h2,
+    .trends-section h2,
+    .alerts-section h2 {
+        font-size: 1rem;
+        margin-bottom: 14px;
+    }
+    
+    .actuator-card {
+        padding: 10px;
+        border-radius: 8px;
+    }
+    
+    .btn {
+        padding: 5px 8px;
+        font-size: 0.65rem;
+        min-height: 32px;
+        border-radius: 4px;
+    }
+    
+    .instagram-btn {
+        padding: 5px 10px;
+        font-size: 0.65rem;
+        border-radius: 16px;
+    }
+    
+    .dashboard {
+        gap: 12px;
+    }
+}
+
+/* Mejoras adicionales para dispositivos móviles */
+@media (max-width: 500px) {
+    .sensor-card {
+        min-height: auto;
+    }
+    
+    .actuator-card {
+        min-height: auto;
+    }
+}
+
+/* Optimización para orientación landscape en móviles */
+@media (max-width: 900px) and (orientation: landscape) {
+    .sensors-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    
+    .actuators-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    
+    .header {
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+    
+    .dashboard {
+        gap: 20px;
     }
 }
