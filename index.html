@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Monitoreo de Hongos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-mushroom"></i> Dashboard de Monitoreo - Cultivo de Hongos</h1>
+            <div class="header-info">
+                <span class="status-indicator online">
+                    <i class="fas fa-circle"></i> Sistema Activo
+                </span>
+                <span class="last-update">Última actualización: <span id="lastUpdate">--</span></span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
+            <!-- Sensores Principales -->
+            <section class="sensors-grid">
+                <div class="sensor-card temperature">
+                    <div class="sensor-icon">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    <div class="sensor-info">
+                        <h3>Temperatura</h3>
+                        <div class="sensor-value" id="temperature">--°C</div>
+                        <div class="sensor-status" id="tempStatus">Normal</div>
+                    </div>
+                    <div class="sensor-chart">
+                        <canvas id="tempChart" width="100" height="60"></canvas>
+                    </div>
+                </div>
+
+                <div class="sensor-card humidity">
+                    <div class="sensor-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <div class="sensor-info">
+                        <h3>Humedad Relativa</h3>
+                        <div class="sensor-value" id="humidity">--%</div>
+                        <div class="sensor-status" id="humStatus">Normal</div>
+                    </div>
+                    <div class="sensor-chart">
+                        <canvas id="humChart" width="100" height="60"></canvas>
+                    </div>
+                </div>
+
+                <div class="sensor-card co2">
+                    <div class="sensor-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <div class="sensor-info">
+                        <h3>CO2</h3>
+                        <div class="sensor-value" id="co2">-- ppm</div>
+                        <div class="sensor-status" id="co2Status">Normal</div>
+                    </div>
+                    <div class="sensor-chart">
+                        <canvas id="co2Chart" width="100" height="60"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Estado de Actuadores -->
+            <section class="actuators-section">
+                <h2><i class="fas fa-cogs"></i> Estado de Actuadores</h2>
+                <div class="actuators-grid">
+                    <div class="actuator-card" id="ventilationCard">
+                        <div class="actuator-header">
+                            <i class="fas fa-fan"></i>
+                            <h3>Ventilación</h3>
+                        </div>
+                        <div class="actuator-status" id="ventilationStatus">Desactivado</div>
+                        <div class="actuator-controls">
+                            <button class="btn btn-primary" onclick="toggleActuator('ventilation')">
+                                Activar/Desactivar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="actuator-card" id="heatingCard">
+                        <div class="actuator-header">
+                            <i class="fas fa-fire"></i>
+                            <h3>Calefacción</h3>
+                        </div>
+                        <div class="actuator-status" id="heatingStatus">Desactivado</div>
+                        <div class="actuator-controls">
+                            <button class="btn btn-primary" onclick="toggleActuator('heating')">
+                                Activar/Desactivar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="actuator-card" id="humidifierCard">
+                        <div class="actuator-header">
+                            <i class="fas fa-cloud-rain"></i>
+                            <h3>Humidificador</h3>
+                        </div>
+                        <div class="actuator-status" id="humidifierStatus">Desactivado</div>
+                        <div class="actuator-controls">
+                            <button class="btn btn-primary" onclick="toggleActuator('humidifier')">
+                                Activar/Desactivar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="actuator-card" id="lightingCard">
+                        <div class="actuator-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <h3>Iluminación</h3>
+                        </div>
+                        <div class="actuator-status" id="lightingStatus">Desactivado</div>
+                        <div class="actuator-controls">
+                            <button class="btn btn-primary" onclick="toggleActuator('lighting')">
+                                Activar/Desactivar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gráficos de Tendencias -->
+            <section class="trends-section">
+                <h2><i class="fas fa-chart-line"></i> Tendencias de los Últimos 24 Horas</h2>
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Temperatura</h3>
+                        <canvas id="tempTrendChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Humedad</h3>
+                        <canvas id="humTrendChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alertas y Notificaciones -->
+            <section class="alerts-section">
+                <h2><i class="fas fa-exclamation-triangle"></i> Alertas y Notificaciones</h2>
+                <div class="alerts-container" id="alertsContainer">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Sistema funcionando normalmente</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
