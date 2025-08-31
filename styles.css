@@ -18,6 +18,11 @@ body {
     padding: 20px;
 }
 
+canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
 /* Header */
 .header {
     background: rgba(255, 255, 255, 0.95);
@@ -290,8 +295,8 @@ body {
 
 .charts-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
 }
 
 .chart-card {
@@ -410,12 +415,12 @@ body {
     }
     
     .sensors-grid {
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
     }
     
     .actuators-grid {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
     }
 }
@@ -426,7 +431,7 @@ body {
     }
     
     .sensors-grid {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 18px;
     }
     
@@ -447,7 +452,7 @@ body {
     }
     
     .sensors-grid {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 16px;
     }
     
@@ -501,6 +506,7 @@ body {
         gap: 15px;
         width: 100%;
         max-width: 100%;
+        flex: 1 1 auto;
     }
     
     .sensor-icon {
