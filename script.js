@@ -238,8 +238,10 @@ function updateTrendCharts() {
 function drawTrendChart(ctx, data, label, color) {
     if (data.length < 2) return;
     
-    const width = 400;
-    const height = 200;
+    const width = ctx.canvas.clientWidth;
+    const height = ctx.canvas.clientHeight;
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
     const padding = 40;
     
     // Encontrar valores min y max
