@@ -1,3 +1,39 @@
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+  import { getDatabase, ref, onValue, set, push, serverTimestamp, query, orderByChild, limitToLast, get, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+  // Config de firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_hvYY0cOBxhhflW2OYs7M8S9tgXxFFJQ",
+    authDomain: "funguys-livedemo.firebaseapp.com",
+    databaseURL: "https://funguys-livedemo-default-rtdb.firebaseio.com",
+    projectId: "funguys-livedemo",
+    storageBucket: "funguys-livedemo.firebasestorage.app",
+    messagingSenderId: "850862837099",
+    appId: "1:850862837099:web:c9ef78519016e9de87102e",
+    measurementId: "G-JKDWMMDKEK"
+  };
+
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getDatabase(app);
+
+  // Guardar ref global para usar en script.js
+  window.db = db;
+  window.ref = ref;
+  window.onValue = onValue;
+  window.set = set;
+  window.push = push;
+  window.serverTimestamp = serverTimestamp;
+  window.query = query;
+  window.orderByChild = orderByChild;
+  window.limitToLast = limitToLast;
+  window.get = get;
+  window.remove = remove;
+</script>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>

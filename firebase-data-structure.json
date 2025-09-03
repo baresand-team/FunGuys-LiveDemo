@@ -1,0 +1,13 @@
+{
+  "Sensors": {
+    "Temperature": 24,
+    "Humidity": 89,
+    "CO2": 500
+  },
+  "Actuators": {
+    "heating": false,
+    "humidifier": false,
+    "lighting": false,
+    "ventilation": false
+  }
+}

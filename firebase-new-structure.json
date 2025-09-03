@@ -1,0 +1,43 @@
+{
+  "Sensors": {
+    "Temperature": 24,
+    "Humidity": 89,
+    "CO2": 500,
+    "history": {
+      "-N_generatedKey1": {
+        "Temperature": 24.1,
+        "Humidity": 88,
+        "CO2": 495,
+        "timestamp": 1709280000000
+      },
+      "-N_generatedKey2": {
+        "Temperature": 24.3,
+        "Humidity": 89,
+        "CO2": 500,
+        "timestamp": 1709280060000
+      }
+    }
+  },
+  "Actuators": {
+    "heating": false,
+    "humidifier": false,
+    "lighting": false,
+    "ventilation": false,
+    "history": {
+      "-N_actuatorKey1": {
+        "heating": true,
+        "humidifier": false,
+        "lighting": false,
+        "ventilation": false,
+        "timestamp": 1709280000000
+      },
+      "-N_actuatorKey2": {
+        "heating": false,
+        "humidifier": false,
+        "lighting": false,
+        "ventilation": false,
+        "timestamp": 1709280060000
+      }
+    }
+  }
+}

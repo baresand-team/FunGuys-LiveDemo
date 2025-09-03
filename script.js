@@ -5,6 +5,11 @@ const config = {
         temperature: { min: 18, max: 28, optimal: 23 },
         humidity: { min: 70, max: 90, optimal: 80 },
         co2: { min: 400, max: 1200, optimal: 800 }
+    },
+    history: {
+        maxRecords: 288,        // 24 horas × 12 registros/hora (cada 5 min)
+        cleanupInterval: 3600000, // Limpiar cada hora (1 hora)
+        updateInterval: 300000   // Actualizar historial cada 5 minutos
     }
 };
 
@@ -31,11 +36,350 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Función de inicialización
-function initializeDashboard() {
+async function initializeDashboard() {
     updateLastUpdate();
-    generateInitialData();
+    //generateInitialData();
+    listenToFirebase();
+    
+    // Cargar datos históricos al inicializar
+    await loadHistoricalData();
+    
     updateSensorDisplays();
     updateActuatorDisplays();
+}
+
+function listenToFirebase() {
+    // Verificar que Firebase esté disponible
+    if (!window.db || !window.ref || !window.onValue) {
+        console.error('Firebase no está inicializado correctamente');
+        addAlert('Error: Firebase no está disponible', 'danger');
+        return;
+    }
+
+    // Referencias a los datos en Firebase
+    const sensorsRef = window.ref(window.db, 'Sensors');
+    const actuatorsRef = window.ref(window.db, 'Actuators');
+    
+    // Escuchar cambios en los sensores
+    window.onValue(sensorsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            updateSensorsFromFirebase(data);
+        }
+    }, (error) => {
+        console.error('Error al leer sensores:', error);
+        addAlert('Error al conectar con sensores', 'danger');
+    });
+    
+    // Escuchar cambios en el historial de sensores
+    const sensorsHistoryRef = window.ref(window.db, 'Sensors/history');
+    window.onValue(sensorsHistoryRef, (snapshot) => {
+        if (snapshot.exists()) {
+            loadHistoricalDataFromSnapshot(snapshot);
+        }
+    }, (error) => {
+        console.error('Error al leer historial de sensores:', error);
+    });
+    
+    // Escuchar cambios en los actuadores
+    window.onValue(actuatorsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            updateActuatorsFromFirebase(data);
+        }
+    }, (error) => {
+        console.error('Error al leer actuadores:', error);
+        addAlert('Error al conectar con actuadores', 'danger');
+    });
+    
+    addAlert('Conectado a Firebase Realtime Database', 'success');
+    
+    // Iniciar guardado automático de historial
+    startHistorySaving();
+}
+
+// Función para guardar datos históricos en Firebase
+async function saveSensorHistory(sensorData) {
+    if (!window.db || !window.push || !window.serverTimestamp) {
+        console.error('Firebase no está disponible para guardar historial');
+        return;
+    }
+
+    try {
+        const historyRef = window.ref(window.db, 'Sensors/history');
+        await window.push(historyRef, {
+            Temperature: sensorData.Temperature,
+            Humidity: sensorData.Humidity,
+            CO2: sensorData.CO2,
+            timestamp: window.serverTimestamp()
+        });
+        
+        console.log('Datos históricos guardados:', sensorData);
+    } catch (error) {
+        console.error('Error al guardar historial:', error);
+    }
+}
+
+// Función para guardar historial de actuadores
+async function saveActuatorHistory(actuatorData) {
+    if (!window.db || !window.push || !window.serverTimestamp) {
+        console.error('Firebase no está disponible para guardar historial');
+        return;
+    }
+
+    try {
+        const historyRef = window.ref(window.db, 'Actuators/history');
+        await window.push(historyRef, {
+            heating: actuatorData.heating,
+            humidifier: actuatorData.humidifier,
+            lighting: actuatorData.lighting,
+            ventilation: actuatorData.ventilation,
+            timestamp: window.serverTimestamp()
+        });
+        
+        console.log('Historial de actuadores guardado:', actuatorData);
+    } catch (error) {
+        console.error('Error al guardar historial de actuadores:', error);
+    }
+}
+
+// Función para limpiar historial antiguo
+async function cleanupHistory() {
+    if (!window.db || !window.query || !window.orderByChild || !window.limitToLast || !window.get || !window.remove) {
+        console.error('Firebase no está disponible para limpiar historial');
+        return;
+    }
+
+    try {
+        // Limpiar historial de sensores
+        const sensorsHistoryRef = window.ref(window.db, 'Sensors/history');
+        const sensorsQuery = window.query(sensorsHistoryRef, window.orderByChild('timestamp'), window.limitToLast(config.history.maxRecords));
+        const sensorsSnapshot = await window.get(sensorsQuery);
+        
+        if (sensorsSnapshot.exists()) {
+            const allSensorsData = [];
+            sensorsSnapshot.forEach((childSnapshot) => {
+                allSensorsData.push({ key: childSnapshot.key, ...childSnapshot.val() });
+            });
+            
+            // Ordenar por timestamp y eliminar los más antiguos
+            allSensorsData.sort((a, b) => a.timestamp - b.timestamp);
+            const toDelete = allSensorsData.slice(0, allSensorsData.length - config.history.maxRecords);
+            
+            for (const item of toDelete) {
+                await window.remove(window.ref(window.db, `Sensors/history/${item.key}`));
+            }
+        }
+
+        // Limpiar historial de actuadores
+        const actuatorsHistoryRef = window.ref(window.db, 'Actuators/history');
+        const actuatorsQuery = window.query(actuatorsHistoryRef, window.orderByChild('timestamp'), window.limitToLast(config.history.maxRecords));
+        const actuatorsSnapshot = await window.get(actuatorsQuery);
+        
+        if (actuatorsSnapshot.exists()) {
+            const allActuatorsData = [];
+            actuatorsSnapshot.forEach((childSnapshot) => {
+                allActuatorsData.push({ key: childSnapshot.key, ...childSnapshot.val() });
+            });
+            
+            // Ordenar por timestamp y eliminar los más antiguos
+            allActuatorsData.sort((a, b) => a.timestamp - b.timestamp);
+            const toDelete = allActuatorsData.slice(0, allActuatorsData.length - config.history.maxRecords);
+            
+            for (const item of toDelete) {
+                await window.remove(window.ref(window.db, `Actuators/history/${item.key}`));
+            }
+        }
+        
+        console.log('Limpieza de historial completada');
+    } catch (error) {
+        console.error('Error al limpiar historial:', error);
+    }
+}
+
+// Función para iniciar el guardado automático de historial
+function startHistorySaving() {
+    console.log('Iniciando guardado automático de historial...');
+    
+    // Guardar historial cada 5 minutos (300000 ms)
+    setInterval(async () => {
+        console.log('Ejecutando guardado automático de historial...');
+        
+        try {
+            // Obtener datos actuales de sensores
+            const sensorsRef = window.ref(window.db, 'Sensors');
+            const sensorsSnapshot = await window.get(sensorsRef);
+            if (sensorsSnapshot.exists()) {
+                const currentData = sensorsSnapshot.val();
+                console.log('Datos actuales de sensores:', currentData);
+                
+                if (currentData.Temperature !== undefined && currentData.Humidity !== undefined && currentData.CO2 !== undefined) {
+                    await saveSensorHistory(currentData);
+                    console.log('Historial de sensores guardado exitosamente');
+                } else {
+                    console.log('Datos de sensores incompletos, no se guarda historial');
+                }
+            } else {
+                console.log('No hay datos de sensores disponibles');
+            }
+            
+            // Obtener datos actuales de actuadores
+            const actuatorsRef = window.ref(window.db, 'Actuators');
+            const actuatorsSnapshot = await window.get(actuatorsRef);
+            if (actuatorsSnapshot.exists()) {
+                const currentData = actuatorsSnapshot.val();
+                console.log('Datos actuales de actuadores:', currentData);
+                
+                if (currentData.heating !== undefined) {
+                    await saveActuatorHistory(currentData);
+                    console.log('Historial de actuadores guardado exitosamente');
+                } else {
+                    console.log('Datos de actuadores incompletos, no se guarda historial');
+                }
+            } else {
+                console.log('No hay datos de actuadores disponibles');
+            }
+        } catch (error) {
+            console.error('Error en guardado automático de historial:', error);
+        }
+    }, config.history.updateInterval);
+    
+    // Limpiar historial cada hora
+    setInterval(() => {
+        console.log('Ejecutando limpieza de historial...');
+        cleanupHistory();
+    }, config.history.cleanupInterval);
+    
+    console.log('Guardado automático de historial configurado correctamente');
+}
+
+// Función para leer datos históricos de Firebase
+async function loadHistoricalData() {
+    if (!window.db || !window.query || !window.orderByChild || !window.limitToLast || !window.get) {
+        console.error('Firebase no está disponible para leer historial');
+        return;
+    }
+
+    try {
+        // Cargar historial de sensores
+        const sensorsHistoryRef = window.ref(window.db, 'Sensors/history');
+        const sensorsQuery = window.query(sensorsHistoryRef, window.orderByChild('timestamp'), window.limitToLast(config.history.maxRecords));
+        const sensorsSnapshot = await window.get(sensorsQuery);
+        
+        if (sensorsSnapshot.exists()) {
+            loadHistoricalDataFromSnapshot(sensorsSnapshot);
+        }
+    } catch (error) {
+        console.error('Error al cargar datos históricos:', error);
+    }
+}
+
+// Función para procesar snapshot de datos históricos
+function loadHistoricalDataFromSnapshot(snapshot) {
+    // Limpiar datos históricos actuales
+    historicalData.temperature = [];
+    historicalData.humidity = [];
+    historicalData.co2 = [];
+    
+    // Procesar datos históricos
+    snapshot.forEach((childSnapshot) => {
+        const data = childSnapshot.val();
+        const timestamp = new Date(data.timestamp);
+        
+        historicalData.temperature.push({
+            time: timestamp,
+            value: data.Temperature
+        });
+        
+        historicalData.humidity.push({
+            time: timestamp,
+            value: data.Humidity
+        });
+        
+        historicalData.co2.push({
+            time: timestamp,
+            value: data.CO2
+        });
+    });
+    
+    // Ordenar por tiempo
+    historicalData.temperature.sort((a, b) => a.time - b.time);
+    historicalData.humidity.sort((a, b) => a.time - b.time);
+    historicalData.co2.sort((a, b) => a.time - b.time);
+    
+    console.log(`Cargados ${historicalData.temperature.length} registros históricos`);
+    
+    // Actualizar la interfaz con datos históricos
+    updateSensorDisplays();
+    updateTrendCharts();
+}
+
+// Función para actualizar sensores desde Firebase
+function updateSensorsFromFirebase(data) {
+    const now = new Date();
+    
+    // Actualizar datos históricos con los nuevos valores (usando los nombres exactos de tu Firebase)
+    if (data.Temperature !== undefined) {
+        historicalData.temperature.push({ time: now, value: data.Temperature });
+    }
+    if (data.Humidity !== undefined) {
+        historicalData.humidity.push({ time: now, value: data.Humidity });
+    }
+    if (data.CO2 !== undefined) {
+        historicalData.co2.push({ time: now, value: data.CO2 });
+    }
+    
+    // Mantener solo las últimas 24 horas (1440 puntos si se actualiza cada minuto)
+    const maxPoints = 1440;
+    if (historicalData.temperature.length > maxPoints) {
+        historicalData.temperature.shift();
+    }
+    if (historicalData.humidity.length > maxPoints) {
+        historicalData.humidity.shift();
+    }
+    if (historicalData.co2.length > maxPoints) {
+        historicalData.co2.shift();
+    }
+    
+    // Actualizar la interfaz
+    updateSensorDisplays();
+    updateTrendCharts();
+    updateLastUpdate();
+    
+    // Verificar alertas
+    if (data.Temperature !== undefined && data.Humidity !== undefined && data.CO2 !== undefined) {
+        checkAlerts(data.Temperature, data.Humidity, data.CO2);
+    }
+}
+
+// Función para actualizar actuadores desde Firebase
+function updateActuatorsFromFirebase(data) {
+    // Actualizar el estado local de los actuadores (usando los nombres exactos de tu Firebase)
+    if (data.ventilation !== undefined) actuators.ventilation = data.ventilation;
+    if (data.heating !== undefined) actuators.heating = data.heating;
+    if (data.humidifier !== undefined) actuators.humidifier = data.humidifier;
+    if (data.lighting !== undefined) actuators.lighting = data.lighting;
+    
+    // Actualizar la interfaz
+    updateActuatorDisplays();
+}
+
+// Función para enviar cambios de actuadores a Firebase
+function updateActuatorInFirebase(actuatorName, value) {
+    if (!window.db || !window.ref || !window.set) {
+        console.error('Firebase no está disponible para escribir');
+        return;
+    }
+    
+    const actuatorRef = window.ref(window.db, `Actuators/${actuatorName}`);
+    window.set(actuatorRef, value)
+        .then(() => {
+            console.log(`${actuatorName} actualizado en Firebase:`, value);
+        })
+        .catch((error) => {
+            console.error('Error al actualizar actuador en Firebase:', error);
+            addAlert(`Error al actualizar ${actuatorName}`, 'danger');
+        });
 }
 
 // Función para generar datos iniciales simulados
@@ -172,12 +516,19 @@ function updateActuatorDisplays() {
 }
 
 // Función para alternar actuadores
-function toggleActuator(actuatorName) {
-    actuators[actuatorName] = !actuators[actuatorName];
+async function toggleActuator(actuatorName) {
+    const newValue = !actuators[actuatorName];
+    actuators[actuatorName] = newValue;
     updateActuatorDisplays();
     
-    // Simular efecto en los sensores
-    if (actuators[actuatorName]) {
+    // Actualizar en Firebase
+    updateActuatorInFirebase(actuatorName, newValue);
+    
+    // Guardar en historial inmediatamente
+    await saveActuatorHistory(actuators);
+    
+    // Mostrar mensaje
+    if (newValue) {
         addAlert(`Actuador ${actuatorName} activado`, 'success');
     } else {
         addAlert(`Actuador ${actuatorName} desactivado`, 'info');
@@ -371,12 +722,23 @@ function checkAlerts(temp, hum, co2) {
 
 // Función para iniciar actualizaciones de datos
 function startDataUpdates() {
-    setInterval(() => {
-        simulateDataUpdate();
-        updateSensorDisplays();
-        updateTrendCharts();
-        updateLastUpdate();
-    }, config.updateInterval);
+    // Solo usar simulación si Firebase no está disponible
+    if (!window.db || !window.ref || !window.onValue) {
+        console.log('Firebase no disponible, usando simulación de datos');
+        setInterval(() => {
+            simulateDataUpdate();
+            updateSensorDisplays();
+            updateTrendCharts();
+            updateLastUpdate();
+        }, config.updateInterval);
+    } else {
+        console.log('Firebase disponible, usando datos en tiempo real');
+        // Firebase manejará las actualizaciones automáticamente
+        // Solo actualizamos la última actualización periódicamente
+        setInterval(() => {
+            updateLastUpdate();
+        }, config.updateInterval);
+    }
 }
 
 // Función para exportar datos (opcional)
@@ -393,3 +755,36 @@ function exportData() {
 
 // Agregar función de exportación al objeto window para uso global
 window.exportData = exportData;
+
+// Función para probar manualmente el guardado de historial
+async function testHistorySave() {
+    console.log('Probando guardado manual de historial...');
+    
+    try {
+        // Obtener datos actuales de sensores
+        const sensorsRef = window.ref(window.db, 'Sensors');
+        const sensorsSnapshot = await window.get(sensorsRef);
+        if (sensorsSnapshot.exists()) {
+            const currentData = sensorsSnapshot.val();
+            console.log('Datos actuales de sensores:', currentData);
+            
+            if (currentData.Temperature !== undefined && currentData.Humidity !== undefined && currentData.CO2 !== undefined) {
+                await saveSensorHistory(currentData);
+                console.log('✅ Historial de sensores guardado manualmente');
+                addAlert('Historial guardado manualmente', 'success');
+            } else {
+                console.log('❌ Datos de sensores incompletos');
+                addAlert('Datos de sensores incompletos', 'warning');
+            }
+        } else {
+            console.log('❌ No hay datos de sensores');
+            addAlert('No hay datos de sensores', 'warning');
+        }
+    } catch (error) {
+        console.error('❌ Error en guardado manual:', error);
+        addAlert('Error al guardar historial', 'danger');
+    }
+}
+
+// Agregar función de prueba al objeto window
+window.testHistorySave = testHistorySave;
