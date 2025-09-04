@@ -92,7 +92,7 @@ function listenToFirebase() {
         addAlert('Error al conectar con actuadores', 'danger');
     });
     
-    addAlert('Conectado a Firebase Realtime Database', 'success');
+    addAlert('Conectado a la base de datos con exito!', 'success');
     
     // Iniciar guardado automático de historial
     startHistorySaving();
