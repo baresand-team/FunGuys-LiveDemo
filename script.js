@@ -44,6 +44,12 @@ async function initializeDashboard() {
     // Cargar datos históricos al inicializar
     await loadHistoricalData();
     
+    // Cargar datos actuales de sensores inmediatamente
+    await loadCurrentSensorData();
+    
+    // Cargar datos actuales de actuadores inmediatamente
+    await loadCurrentActuatorData();
+    
     updateSensorDisplays();
     updateActuatorDisplays();
 }
@@ -253,6 +259,74 @@ function startHistorySaving() {
     console.log('Guardado automático de historial configurado correctamente');
 }
 
+// Función para cargar datos actuales de sensores
+async function loadCurrentSensorData() {
+    if (!window.db || !window.ref || !window.get) {
+        console.error('Firebase no está disponible para leer datos actuales');
+        return;
+    }
+
+    try {
+        // Cargar datos actuales de sensores
+        const sensorsRef = window.ref(window.db, 'Sensors');
+        const sensorsSnapshot = await window.get(sensorsRef);
+        
+        if (sensorsSnapshot.exists()) {
+            const currentData = sensorsSnapshot.val();
+            console.log('Datos actuales de sensores cargados:', currentData);
+            
+            // Actualizar datos históricos con los valores actuales
+            const now = new Date();
+            if (currentData.Temperature !== undefined) {
+                historicalData.temperature.push({ time: now, value: currentData.Temperature });
+            }
+            if (currentData.Humidity !== undefined) {
+                historicalData.humidity.push({ time: now, value: currentData.Humidity });
+            }
+            if (currentData.CO2 !== undefined) {
+                historicalData.co2.push({ time: now, value: currentData.CO2 });
+            }
+            
+            console.log('Datos actuales agregados al historial');
+        } else {
+            console.log('No hay datos actuales de sensores disponibles');
+        }
+    } catch (error) {
+        console.error('Error al cargar datos actuales de sensores:', error);
+    }
+}
+
+// Función para cargar datos actuales de actuadores
+async function loadCurrentActuatorData() {
+    if (!window.db || !window.ref || !window.get) {
+        console.error('Firebase no está disponible para leer datos actuales de actuadores');
+        return;
+    }
+
+    try {
+        // Cargar datos actuales de actuadores
+        const actuatorsRef = window.ref(window.db, 'Actuators');
+        const actuatorsSnapshot = await window.get(actuatorsRef);
+        
+        if (actuatorsSnapshot.exists()) {
+            const currentData = actuatorsSnapshot.val();
+            console.log('Datos actuales de actuadores cargados:', currentData);
+            
+            // Actualizar estado local de actuadores
+            if (currentData.ventilation !== undefined) actuators.ventilation = currentData.ventilation;
+            if (currentData.heating !== undefined) actuators.heating = currentData.heating;
+            if (currentData.humidifier !== undefined) actuators.humidifier = currentData.humidifier;
+            if (currentData.lighting !== undefined) actuators.lighting = currentData.lighting;
+            
+            console.log('Estado de actuadores actualizado:', actuators);
+        } else {
+            console.log('No hay datos actuales de actuadores disponibles');
+        }
+    } catch (error) {
+        console.error('Error al cargar datos actuales de actuadores:', error);
+    }
+}
+
 // Función para leer datos históricos de Firebase
 async function loadHistoricalData() {
     if (!window.db || !window.query || !window.orderByChild || !window.limitToLast || !window.get) {
@@ -276,10 +350,12 @@ async function loadHistoricalData() {
 
 // Función para procesar snapshot de datos históricos
 function loadHistoricalDataFromSnapshot(snapshot) {
-    // Limpiar datos históricos actuales
-    historicalData.temperature = [];
-    historicalData.humidity = [];
-    historicalData.co2 = [];
+    // Solo limpiar si no hay datos actuales cargados
+    if (historicalData.temperature.length === 0) {
+        historicalData.temperature = [];
+        historicalData.humidity = [];
+        historicalData.co2 = [];
+    }
     
     // Procesar datos históricos
     snapshot.forEach((childSnapshot) => {
@@ -350,6 +426,12 @@ function updateSensorsFromFirebase(data) {
     if (data.Temperature !== undefined && data.Humidity !== undefined && data.CO2 !== undefined) {
         checkAlerts(data.Temperature, data.Humidity, data.CO2);
     }
+    
+    console.log('Datos de sensores actualizados desde Firebase:', {
+        Temperature: data.Temperature,
+        Humidity: data.Humidity,
+        CO2: data.CO2
+    });
 }
 
 // Función para actualizar actuadores desde Firebase
@@ -415,10 +497,18 @@ function updateLastUpdate() {
 
 // Función para actualizar las pantallas de sensores
 function updateSensorDisplays() {
-    // Obtener valores actuales
-    const currentTemp = historicalData.temperature[historicalData.temperature.length - 1]?.value || 23;
-    const currentHum = historicalData.humidity[historicalData.humidity.length - 1]?.value || 80;
-    const currentCO2 = historicalData.co2[historicalData.co2.length - 1]?.value || 800;
+    // Obtener valores actuales de los datos históricos o usar valores por defecto
+    let currentTemp = historicalData.temperature[historicalData.temperature.length - 1]?.value;
+    let currentHum = historicalData.humidity[historicalData.humidity.length - 1]?.value;
+    let currentCO2 = historicalData.co2[historicalData.co2.length - 1]?.value;
+    
+    // Si no hay datos históricos, intentar obtener datos actuales de Firebase
+    if (currentTemp === undefined || currentHum === undefined || currentCO2 === undefined) {
+        // Usar valores por defecto solo si no hay datos disponibles
+        currentTemp = currentTemp || 23;
+        currentHum = currentHum || 80;
+        currentCO2 = currentCO2 || 800;
+    }
     
     // Actualizar valores
     document.getElementById('temperature').textContent = `${currentTemp.toFixed(1)}°C`;
