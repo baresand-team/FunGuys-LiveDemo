@@ -21,6 +21,10 @@ let actuators = {
     lighting: false
 };
 
+// Estado de autenticación
+let isAdmin = false;
+const ADMIN_PASSWORD = 'lucasputitolindo'; // Cambia esta contraseña por la que quieras
+
 // Datos históricos para gráficos
 let historicalData = {
     temperature: [],
@@ -52,6 +56,9 @@ async function initializeDashboard() {
     
     updateSensorDisplays();
     updateActuatorDisplays();
+    
+    // Inicializar UI de admin
+    updateAdminUI();
 }
 
 function listenToFirebase() {
@@ -878,3 +885,159 @@ async function testHistorySave() {
 
 // Agregar función de prueba al objeto window
 window.testHistorySave = testHistorySave;
+
+// ===== SISTEMA DE LOGIN =====
+
+// Función para alternar modo administrador
+function toggleAdminMode() {
+    if (isAdmin) {
+        // Si ya es admin, desactivar modo admin
+        isAdmin = false;
+        updateAdminUI();
+        addAlert('Modo administrador desactivado', 'info');
+    } else {
+        // Si no es admin, mostrar modal de login
+        showLoginModal();
+    }
+}
+
+// Función para mostrar modal de login
+function showLoginModal() {
+    const modal = document.getElementById('loginModal');
+    const passwordInput = document.getElementById('passwordInput');
+    const errorDiv = document.getElementById('loginError');
+    
+    // Limpiar campos
+    passwordInput.value = '';
+    errorDiv.style.display = 'none';
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+    
+    // Enfocar input de contraseña
+    setTimeout(() => {
+        passwordInput.focus();
+    }, 100);
+}
+
+// Función para cerrar modal de login
+function closeLoginModal() {
+    const modal = document.getElementById('loginModal');
+    modal.style.display = 'none';
+}
+
+// Función para verificar contraseña
+function checkPassword() {
+    const passwordInput = document.getElementById('passwordInput');
+    const errorDiv = document.getElementById('loginError');
+    const password = passwordInput.value.trim();
+    
+    if (password === ADMIN_PASSWORD) {
+        // Contraseña correcta
+        isAdmin = true;
+        updateAdminUI();
+        closeLoginModal();
+        addAlert('Modo administrador activado', 'success');
+    } else {
+        // Contraseña incorrecta
+        errorDiv.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
+        
+        // Agregar efecto de shake al modal
+        const modalContent = document.querySelector('.modal-content');
+        modalContent.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            modalContent.style.animation = '';
+        }, 500);
+    }
+}
+
+// Función para actualizar la UI según el estado de admin
+function updateAdminUI() {
+    const adminToggle = document.getElementById('adminToggle');
+    const actuatorCards = document.querySelectorAll('.actuator-card');
+    
+    if (isAdmin) {
+        // Modo admin activado
+        adminToggle.textContent = '🔓 Modo Administrador';
+        adminToggle.classList.add('admin-active');
+        
+        // Habilitar controles de actuadores
+        actuatorCards.forEach(card => {
+            card.classList.remove('disabled');
+        });
+    } else {
+        // Modo admin desactivado
+        adminToggle.textContent = '🔒 Modo Administrador';
+        adminToggle.classList.remove('admin-active');
+        
+        // Deshabilitar controles de actuadores
+        actuatorCards.forEach(card => {
+            card.classList.add('disabled');
+        });
+    }
+}
+
+// Función para manejar Enter en el input de contraseña
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('passwordInput');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    }
+    
+    // Cerrar modal al hacer clic fuera de él
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeLoginModal();
+            }
+        });
+    }
+});
+
+// Función modificada para alternar actuadores (solo si es admin)
+async function toggleActuator(actuatorName) {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para controlar los actuadores', 'warning');
+        return;
+    }
+    
+    const newValue = !actuators[actuatorName];
+    actuators[actuatorName] = newValue;
+    updateActuatorDisplays();
+    
+    // Actualizar en Firebase
+    updateActuatorInFirebase(actuatorName, newValue);
+    
+    // Guardar en historial inmediatamente
+    await saveActuatorHistory(actuators);
+    
+    // Mostrar mensaje
+    if (newValue) {
+        addAlert(`Actuador ${actuatorName} activado`, 'success');
+    } else {
+        addAlert(`Actuador ${actuatorName} desactivado`, 'info');
+    }
+}
+
+// Agregar animación de shake para errores
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+`;
+document.head.appendChild(style);
+
+// Hacer funciones globales
+window.toggleAdminMode = toggleAdminMode;
+window.closeLoginModal = closeLoginModal;
+window.checkPassword = checkPassword;

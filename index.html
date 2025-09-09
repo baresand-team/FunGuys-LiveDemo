@@ -108,7 +108,12 @@
 
             <!-- Estado de Actuadores -->
             <section class="actuators-section">
-                <h2><i class="fas fa-cogs"></i> Estado de Actuadores</h2>
+                <div class="actuators-header">
+                    <h2><i class="fas fa-cogs"></i> Estado de Actuadores</h2>
+                    <button id="adminToggle" class="btn btn-secondary" onclick="toggleAdminMode()">
+                        <i class="fas fa-user-shield"></i> Modo Administrador
+                    </button>
+                </div>
                 <div class="actuators-grid">
                     <div class="actuator-card" id="ventilationCard">
                         <div class="actuator-header">
@@ -196,6 +201,29 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Modal de Login -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-lock"></i> Modo Administrador</h2>
+                <span class="close" onclick="closeLoginModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Ingresa la contraseña para controlar los actuadores:</p>
+                <div class="login-form">
+                    <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
+                    <button onclick="checkPassword()" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Ingresar
+                    </button>
+                </div>
+                <div id="loginError" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Contraseña incorrecta</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
