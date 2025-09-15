@@ -110,9 +110,20 @@
             <section class="actuators-section">
                 <div class="actuators-header">
                     <h2><i class="fas fa-cogs"></i> Estado de Actuadores</h2>
-                    <button id="adminToggle" class="btn btn-secondary" onclick="toggleAdminMode()">
-                        <i class="fas fa-user-shield"></i> Modo Administrador
-                    </button>
+                    <div class="header-controls">
+                        <button id="modeToggle" class="btn btn-mode" onclick="toggleControlMode()">
+                            <i class="fas fa-robot"></i> <span id="modeText">Automático</span>
+                        </button>
+                        <button id="rangesButton" class="btn btn-settings" onclick="showRangesModal()">
+                            <i class="fas fa-sliders-h"></i> Configurar Rangos
+                        </button>
+                        <button id="lightScheduleButton" class="btn btn-settings" onclick="showLightScheduleModal()">
+                            <i class="fas fa-clock"></i> Programar Luces
+                        </button>
+                        <button id="adminToggle" class="btn btn-secondary" onclick="toggleAdminMode()">
+                            <i class="fas fa-user-shield"></i> Modo Administrador
+                        </button>
+                    </div>
                 </div>
                 <div class="actuators-grid">
                     <div class="actuator-card" id="ventilationCard">
@@ -130,7 +141,7 @@
 
                     <div class="actuator-card" id="heatingCard">
                         <div class="actuator-header">
-                            <i class="fas fa-fire"></i>
+                            <i class="fas fa-snowflake"></i>
                             <h3>Calefacción</h3>
                         </div>
                         <div class="actuator-status" id="heatingStatus">Desactivado</div>
@@ -171,7 +182,7 @@
 
             <!-- Gráficos de Tendencias -->
             <section class="trends-section">
-                <h2><i class="fas fa-chart-line"></i> Tendencias de los Últimos 24 Horas</h2>
+                <h2><i class="fas fa-chart-line"></i> Tendencias de las últimas 24 horas</h2>
                 <div class="charts-container">
                     <div class="chart-card">
                         <h3>Temperatura</h3>
@@ -201,6 +212,172 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Modal de Configuración de Rangos -->
+    <div id="rangesModal" class="modal">
+        <div class="modal-content ranges-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-sliders-h"></i> Configuración de Rangos</h2>
+                <span class="close" onclick="closeRangesModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="ranges-grid">
+                    <div class="range-group">
+                        <h3><i class="fas fa-thermometer-half"></i> Temperatura (°C)</h3>
+                        <div class="range-inputs">
+                            <div class="input-group">
+                                <label for="tempMin">Mínima:</label>
+                                <input type="number" id="tempMin" min="15" max="35" step="0.1" value="23">
+                            </div>
+                            <div class="input-group">
+                                <label for="tempMax">Máxima:</label>
+                                <input type="number" id="tempMax" min="15" max="35" step="0.1" value="28">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="range-group">
+                        <h3><i class="fas fa-tint"></i> Humedad (%)</h3>
+                        <div class="range-inputs">
+                            <div class="input-group">
+                                <label for="humMin">Mínima:</label>
+                                <input type="number" id="humMin" min="50" max="95" step="0.1" value="80">
+                            </div>
+                            <div class="input-group">
+                                <label for="humMax">Máxima:</label>
+                                <input type="number" id="humMax" min="50" max="95" step="0.1" value="90">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="range-group">
+                        <h3><i class="fas fa-fan"></i> Extractor por Humedad (%)</h3>
+                        <div class="range-inputs">
+                            <div class="input-group">
+                                <label for="humExtractorMin">Activar en:</label>
+                                <input type="number" id="humExtractorMin" min="80" max="95" step="0.1" value="90">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button onclick="resetRanges()" class="btn btn-secondary">
+                        <i class="fas fa-undo"></i> Restablecer
+                    </button>
+                    <button onclick="saveRanges()" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+                
+                <div id="rangesError" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Error en los valores ingresados</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Programación de Luces -->
+    <div id="lightScheduleModal" class="modal">
+        <div class="modal-content ranges-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-clock"></i> Programación de Luces</h2>
+                <span class="close" onclick="closeLightScheduleModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="light-schedule-options">
+                    <div class="schedule-mode-selector">
+                        <h3><i class="fas fa-lightbulb"></i> Modo de Control</h3>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="lightMode" value="manual" checked>
+                                <span class="radio-label">
+                                    <i class="fas fa-hand-paper"></i> Manual - Control desde web
+                                </span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="lightMode" value="schedule">
+                                <span class="radio-label">
+                                    <i class="fas fa-calendar-alt"></i> Horario Fijo - Encender/apagar a horas específicas
+                                </span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="lightMode" value="cycle">
+                                <span class="radio-label">
+                                    <i class="fas fa-sync-alt"></i> Ciclo Automático - X horas ON, Y horas OFF
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Configuración de Horario Fijo -->
+                    <div id="scheduleConfig" class="config-section" style="display: none;">
+                        <h3><i class="fas fa-clock"></i> Configuración de Horario</h3>
+                        <div class="time-inputs">
+                            <div class="input-group">
+                                <label for="startTime">Hora de Encendido:</label>
+                                <input type="time" id="startTime" value="08:00">
+                            </div>
+                            <div class="input-group">
+                                <label for="endTime">Hora de Apagado:</label>
+                                <input type="time" id="endTime" value="20:00">
+                            </div>
+                        </div>
+                        <div class="schedule-preview">
+                            <p><strong>Resumen:</strong> Las luces se encenderán a las <span id="previewStart">08:00</span> 
+                            y se apagarán a las <span id="previewEnd">20:00</span> todos los días.</p>
+                        </div>
+                    </div>
+
+                    <!-- Configuración de Ciclo -->
+                    <div id="cycleConfig" class="config-section" style="display: none;">
+                        <h3><i class="fas fa-sync-alt"></i> Configuración de Ciclo</h3>
+                        <div class="cycle-inputs">
+                            <div class="input-group">
+                                <label for="onHours">Horas Encendido:</label>
+                                <input type="number" id="onHours" min="1" max="24" value="12">
+                                <span class="input-unit">horas</span>
+                            </div>
+                            <div class="input-group">
+                                <label for="offHours">Horas Apagado:</label>
+                                <input type="number" id="offHours" min="1" max="24" value="12">
+                                <span class="input-unit">horas</span>
+                            </div>
+                        </div>
+                        <div class="cycle-preview">
+                            <p><strong>Resumen:</strong> Ciclo de <span id="previewOnHours">12</span> horas encendido 
+                            y <span id="previewOffHours">12</span> horas apagado (total: <span id="previewTotalHours">24</span> horas).</p>
+                        </div>
+                    </div>
+
+                    <!-- Configuración Manual -->
+                    <div id="manualConfig" class="config-section">
+                        <h3><i class="fas fa-hand-paper"></i> Control Manual</h3>
+                        <p class="manual-description">
+                            <i class="fas fa-info-circle"></i> 
+                            En modo manual, puedes controlar las luces directamente desde los botones de actuadores.
+                            No se aplicará ninguna programación automática.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button onclick="resetLightSchedule()" class="btn btn-secondary">
+                        <i class="fas fa-undo"></i> Restablecer
+                    </button>
+                    <button onclick="saveLightSchedule()" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Programación
+                    </button>
+                </div>
+                
+                <div id="lightScheduleError" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Error en la configuración</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de Login -->

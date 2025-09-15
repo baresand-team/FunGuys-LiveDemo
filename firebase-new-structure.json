@@ -19,6 +19,7 @@
     }
   },
   "Actuators": {
+    "auto": true,
     "heating": false,
     "humidifier": false,
     "lighting": false,
@@ -38,6 +39,26 @@
         "ventilation": false,
         "timestamp": 1709280060000
       }
+    }
+  },
+  "Ranges": {
+    "tempMin": 23.0,
+    "tempMax": 28.0,
+    "humMin": 80.0,
+    "humMax": 90.0,
+    "humExtractorMin": 90.0
+  },
+  "LightSchedule": {
+    "mode": "schedule",
+    "schedule": {
+      "startHour": 8,
+      "startMin": 0,
+      "endHour": 20,
+      "endMin": 0
+    },
+    "cycle": {
+      "onHours": 12,
+      "offHours": 12
     }
   }
 }

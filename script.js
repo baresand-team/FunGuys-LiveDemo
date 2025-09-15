@@ -25,6 +25,33 @@ let actuators = {
 let isAdmin = false;
 const ADMIN_PASSWORD = 'lucasputitolindo'; // Cambia esta contraseña por la que quieras
 
+// Estado del modo de control
+let isAutoMode = true;
+
+// Rangos de control actuales
+let controlRanges = {
+    tempMin: 23.0,
+    tempMax: 28.0,
+    humMin: 80.0,
+    humMax: 90.0,
+    humExtractorMin: 90.0
+};
+
+// Programación de luces actual
+let lightSchedule = {
+    mode: 'manual', // 'manual', 'schedule', 'cycle'
+    schedule: {
+        startHour: 8,
+        startMin: 0,
+        endHour: 20,
+        endMin: 0
+    },
+    cycle: {
+        onHours: 12,
+        offHours: 12
+    }
+};
+
 // Datos históricos para gráficos
 let historicalData = {
     temperature: [],
@@ -54,11 +81,20 @@ async function initializeDashboard() {
     // Cargar datos actuales de actuadores inmediatamente
     await loadCurrentActuatorData();
     
+    // Cargar rangos desde Firebase
+    await loadRangesFromFirebase();
+    
+    // Cargar programación de luces desde Firebase
+    await loadLightScheduleFromFirebase();
+    
     updateSensorDisplays();
     updateActuatorDisplays();
     
     // Inicializar UI de admin
     updateAdminUI();
+    
+    // Inicializar UI de modo de control
+    updateModeUI();
 }
 
 function listenToFirebase() {
@@ -103,6 +139,28 @@ function listenToFirebase() {
     }, (error) => {
         console.error('Error al leer actuadores:', error);
         addAlert('Error al conectar con actuadores', 'danger');
+    });
+    
+    // Escuchar cambios en los rangos
+    const rangesRef = window.ref(window.db, 'Ranges');
+    window.onValue(rangesRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            updateRangesFromFirebase(data);
+        }
+    }, (error) => {
+        console.error('Error al leer rangos:', error);
+    });
+    
+    // Escuchar cambios en la programación de luces
+    const lightScheduleRef = window.ref(window.db, 'LightSchedule');
+    window.onValue(lightScheduleRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            updateLightScheduleFromFirebase(data);
+        }
+    }, (error) => {
+        console.error('Error al leer programación de luces:', error);
     });
     
     addAlert('Conectado a la base de datos con exito!', 'success');
@@ -449,8 +507,97 @@ function updateActuatorsFromFirebase(data) {
     if (data.humidifier !== undefined) actuators.humidifier = data.humidifier;
     if (data.lighting !== undefined) actuators.lighting = data.lighting;
     
+    // Actualizar modo automático
+    if (data.auto !== undefined) {
+        isAutoMode = data.auto;
+        updateModeUI();
+    }
+    
     // Actualizar la interfaz
     updateActuatorDisplays();
+}
+
+// Función para actualizar rangos desde Firebase
+function updateRangesFromFirebase(data) {
+    if (data.tempMin !== undefined) controlRanges.tempMin = data.tempMin;
+    if (data.tempMax !== undefined) controlRanges.tempMax = data.tempMax;
+    if (data.humMin !== undefined) controlRanges.humMin = data.humMin;
+    if (data.humMax !== undefined) controlRanges.humMax = data.humMax;
+    if (data.humExtractorMin !== undefined) controlRanges.humExtractorMin = data.humExtractorMin;
+    
+    console.log('Rangos actualizados desde Firebase:', controlRanges);
+    
+    // Actualizar UI de rangos si el modal está abierto
+    updateRangesUI();
+}
+
+// Función para cargar rangos desde Firebase
+async function loadRangesFromFirebase() {
+    if (!window.db || !window.ref || !window.get) {
+        console.error('Firebase no está disponible para leer rangos');
+        return;
+    }
+
+    try {
+        const rangesRef = window.ref(window.db, 'Ranges');
+        const snapshot = await window.get(rangesRef);
+        
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            updateRangesFromFirebase(data);
+            console.log('Rangos cargados desde Firebase:', data);
+        } else {
+            console.log('No hay rangos en Firebase, usando valores por defecto');
+            // Enviar rangos por defecto a Firebase
+            await sendRangesToFirebase();
+        }
+    } catch (error) {
+        console.error('Error al cargar rangos desde Firebase:', error);
+    }
+}
+
+// Función para enviar rangos a Firebase
+async function sendRangesToFirebase() {
+    if (!window.db || !window.ref || !window.set) {
+        console.error('Firebase no está disponible para escribir rangos');
+        return;
+    }
+    
+    try {
+        const rangesRef = window.ref(window.db, 'Ranges');
+        await window.set(rangesRef, {
+            tempMin: controlRanges.tempMin,
+            tempMax: controlRanges.tempMax,
+            humMin: controlRanges.humMin,
+            humMax: controlRanges.humMax,
+            humExtractorMin: controlRanges.humExtractorMin
+        });
+        
+        console.log('Rangos enviados a Firebase:', controlRanges);
+        addAlert('Rangos actualizados correctamente', 'success');
+    } catch (error) {
+        console.error('Error al enviar rangos a Firebase:', error);
+        addAlert('Error al actualizar rangos', 'danger');
+    }
+}
+
+// Función para enviar modo automático a Firebase
+async function sendAutoModeToFirebase(autoMode) {
+    if (!window.db || !window.ref || !window.set) {
+        console.error('Firebase no está disponible para escribir modo');
+        return;
+    }
+    
+    try {
+        const modeRef = window.ref(window.db, 'Actuators/auto');
+        await window.set(modeRef, autoMode);
+        
+        console.log('Modo automático enviado a Firebase:', autoMode);
+        addAlert(`Modo ${autoMode ? 'automático' : 'manual'} activado`, 'success');
+    } catch (error) {
+        console.error('Error al enviar modo a Firebase:', error);
+        addAlert('Error al cambiar modo de control', 'danger');
+    }
 }
 
 // Función para enviar cambios de actuadores a Firebase
@@ -599,6 +746,7 @@ function updateActuatorDisplays() {
     Object.keys(actuators).forEach(actuator => {
         const card = document.getElementById(`${actuator}Card`);
         const statusElement = document.getElementById(`${actuator}Status`);
+        const button = card.querySelector('button');
         
         if (actuators[actuator]) {
             card.classList.add('active');
@@ -608,6 +756,25 @@ function updateActuatorDisplays() {
             card.classList.remove('active');
             statusElement.textContent = 'Desactivado';
             statusElement.style.color = '#7f8c8d';
+        }
+        
+        // Deshabilitar controles en modo automático o si no es admin
+        if (isAutoMode || !isAdmin) {
+            card.classList.add('disabled');
+            if (button) {
+                button.disabled = true;
+                if (isAutoMode) {
+                    button.title = 'Controles deshabilitados en modo automático';
+                } else {
+                    button.title = 'Requiere modo administrador';
+                }
+            }
+        } else {
+            card.classList.remove('disabled');
+            if (button) {
+                button.disabled = false;
+                button.title = 'Activar/Desactivar';
+            }
         }
     });
 }
@@ -999,12 +1166,37 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Event listeners para modal de rangos
+    const rangesModal = document.getElementById('rangesModal');
+    if (rangesModal) {
+        rangesModal.addEventListener('click', function(e) {
+            if (e.target === rangesModal) {
+                closeRangesModal();
+            }
+        });
+    }
+    
+    // Event listeners para modal de programación de luces
+    const lightScheduleModal = document.getElementById('lightScheduleModal');
+    if (lightScheduleModal) {
+        lightScheduleModal.addEventListener('click', function(e) {
+            if (e.target === lightScheduleModal) {
+                closeLightScheduleModal();
+            }
+        });
+    }
 });
 
 // Función modificada para alternar actuadores (solo si es admin)
 async function toggleActuator(actuatorName) {
     if (!isAdmin) {
         addAlert('Debes activar el modo administrador para controlar los actuadores', 'warning');
+        return;
+    }
+    
+    if (isAutoMode) {
+        addAlert('No puedes controlar actuadores en modo automático', 'warning');
         return;
     }
     
@@ -1026,6 +1218,165 @@ async function toggleActuator(actuatorName) {
     }
 }
 
+// ===== FUNCIONES PARA MODO DE CONTROL =====
+
+// Función para alternar modo de control
+async function toggleControlMode() {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para cambiar el modo de control', 'warning');
+        return;
+    }
+    
+    isAutoMode = !isAutoMode;
+    updateModeUI();
+    
+    // Enviar cambio a Firebase
+    await sendAutoModeToFirebase(isAutoMode);
+}
+
+// Función para actualizar UI del modo de control
+function updateModeUI() {
+    const modeToggle = document.getElementById('modeToggle');
+    const modeText = document.getElementById('modeText');
+    
+    if (isAutoMode) {
+        modeToggle.classList.remove('manual-mode');
+        modeToggle.classList.add('auto-mode');
+        modeText.textContent = 'Automático';
+        modeToggle.innerHTML = '<i class="fas fa-robot"></i> <span id="modeText">Automático</span>';
+    } else {
+        modeToggle.classList.remove('auto-mode');
+        modeToggle.classList.add('manual-mode');
+        modeText.textContent = 'Manual';
+        modeToggle.innerHTML = '<i class="fas fa-hand-paper"></i> <span id="modeText">Manual</span>';
+    }
+    
+    // Actualizar estado de los actuadores basado en el modo
+    updateActuatorDisplays();
+}
+
+// ===== FUNCIONES PARA MODAL DE RANGOS =====
+
+// Función para mostrar modal de rangos
+function showRangesModal() {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para configurar rangos', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('rangesModal');
+    const errorDiv = document.getElementById('rangesError');
+    
+    // Ocultar errores
+    errorDiv.style.display = 'none';
+    
+    // Cargar valores actuales en los inputs
+    document.getElementById('tempMin').value = controlRanges.tempMin;
+    document.getElementById('tempMax').value = controlRanges.tempMax;
+    document.getElementById('humMin').value = controlRanges.humMin;
+    document.getElementById('humMax').value = controlRanges.humMax;
+    document.getElementById('humExtractorMin').value = controlRanges.humExtractorMin;
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+}
+
+// Función para cerrar modal de rangos
+function closeRangesModal() {
+    const modal = document.getElementById('rangesModal');
+    modal.style.display = 'none';
+}
+
+// Función para actualizar UI de rangos
+function updateRangesUI() {
+    // Solo actualizar si el modal está abierto
+    const modal = document.getElementById('rangesModal');
+    if (modal.style.display === 'block') {
+        document.getElementById('tempMin').value = controlRanges.tempMin;
+        document.getElementById('tempMax').value = controlRanges.tempMax;
+        document.getElementById('humMin').value = controlRanges.humMin;
+        document.getElementById('humMax').value = controlRanges.humMax;
+        document.getElementById('humExtractorMin').value = controlRanges.humExtractorMin;
+    }
+}
+
+// Función para validar rangos
+function validateRanges(ranges) {
+    const errors = [];
+    
+    if (ranges.tempMin >= ranges.tempMax) {
+        errors.push('La temperatura mínima debe ser menor que la máxima');
+    }
+    
+    if (ranges.humMin >= ranges.humMax) {
+        errors.push('La humedad mínima debe ser menor que la máxima');
+    }
+    
+    if (ranges.tempMin < 15 || ranges.tempMax > 35) {
+        errors.push('La temperatura debe estar entre 15°C y 35°C');
+    }
+    
+    if (ranges.humMin < 50 || ranges.humMax > 95) {
+        errors.push('La humedad debe estar entre 50% y 95%');
+    }
+    
+    if (ranges.humExtractorMin < 80 || ranges.humExtractorMin > 95) {
+        errors.push('El umbral del extractor debe estar entre 80% y 95%');
+    }
+    
+    return errors;
+}
+
+// Función para guardar rangos
+async function saveRanges() {
+    const errorDiv = document.getElementById('rangesError');
+    
+    // Obtener valores de los inputs
+    const newRanges = {
+        tempMin: parseFloat(document.getElementById('tempMin').value),
+        tempMax: parseFloat(document.getElementById('tempMax').value),
+        humMin: parseFloat(document.getElementById('humMin').value),
+        humMax: parseFloat(document.getElementById('humMax').value),
+        humExtractorMin: parseFloat(document.getElementById('humExtractorMin').value)
+    };
+    
+    // Validar rangos
+    const errors = validateRanges(newRanges);
+    if (errors.length > 0) {
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>${errors.join('<br>')}</span>
+        `;
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Ocultar errores
+    errorDiv.style.display = 'none';
+    
+    // Actualizar rangos locales
+    controlRanges = { ...newRanges };
+    
+    // Enviar a Firebase
+    await sendRangesToFirebase();
+    
+    // Cerrar modal
+    closeRangesModal();
+}
+
+// Función para restablecer rangos a valores por defecto
+function resetRanges() {
+    document.getElementById('tempMin').value = 23.0;
+    document.getElementById('tempMax').value = 28.0;
+    document.getElementById('humMin').value = 80.0;
+    document.getElementById('humMax').value = 90.0;
+    document.getElementById('humExtractorMin').value = 90.0;
+    
+    // Ocultar errores
+    const errorDiv = document.getElementById('rangesError');
+    errorDiv.style.display = 'none';
+}
+
 // Agregar animación de shake para errores
 const style = document.createElement('style');
 style.textContent = `
@@ -1037,7 +1388,313 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ===== FUNCIONES PARA PROGRAMACIÓN DE LUCES =====
+
+// Función para actualizar programación de luces desde Firebase
+function updateLightScheduleFromFirebase(data) {
+    if (data.mode !== undefined) lightSchedule.mode = data.mode;
+    
+    if (data.schedule) {
+        if (data.schedule.startHour !== undefined) lightSchedule.schedule.startHour = data.schedule.startHour;
+        if (data.schedule.startMin !== undefined) lightSchedule.schedule.startMin = data.schedule.startMin;
+        if (data.schedule.endHour !== undefined) lightSchedule.schedule.endHour = data.schedule.endHour;
+        if (data.schedule.endMin !== undefined) lightSchedule.schedule.endMin = data.schedule.endMin;
+    }
+    
+    if (data.cycle) {
+        if (data.cycle.onHours !== undefined) lightSchedule.cycle.onHours = data.cycle.onHours;
+        if (data.cycle.offHours !== undefined) lightSchedule.cycle.offHours = data.cycle.offHours;
+    }
+    
+    console.log('Programación de luces actualizada desde Firebase:', lightSchedule);
+    
+    // Actualizar UI si el modal está abierto
+    updateLightScheduleUI();
+}
+
+// Función para cargar programación de luces desde Firebase
+async function loadLightScheduleFromFirebase() {
+    if (!window.db || !window.ref || !window.get) {
+        console.error('Firebase no está disponible para leer programación de luces');
+        return;
+    }
+
+    try {
+        const lightScheduleRef = window.ref(window.db, 'LightSchedule');
+        const snapshot = await window.get(lightScheduleRef);
+        
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            updateLightScheduleFromFirebase(data);
+            console.log('Programación de luces cargada desde Firebase:', data);
+        } else {
+            console.log('No hay programación de luces en Firebase, usando valores por defecto');
+            // Enviar programación por defecto a Firebase
+            await sendLightScheduleToFirebase();
+        }
+    } catch (error) {
+        console.error('Error al cargar programación de luces desde Firebase:', error);
+    }
+}
+
+// Función para enviar programación de luces a Firebase
+async function sendLightScheduleToFirebase() {
+    if (!window.db || !window.ref || !window.set) {
+        console.error('Firebase no está disponible para escribir programación de luces');
+        return;
+    }
+    
+    try {
+        const lightScheduleRef = window.ref(window.db, 'LightSchedule');
+        await window.set(lightScheduleRef, {
+            mode: lightSchedule.mode,
+            schedule: {
+                startHour: lightSchedule.schedule.startHour,
+                startMin: lightSchedule.schedule.startMin,
+                endHour: lightSchedule.schedule.endHour,
+                endMin: lightSchedule.schedule.endMin
+            },
+            cycle: {
+                onHours: lightSchedule.cycle.onHours,
+                offHours: lightSchedule.cycle.offHours
+            }
+        });
+        
+        console.log('Programación de luces enviada a Firebase:', lightSchedule);
+        addAlert('Programación de luces actualizada correctamente', 'success');
+    } catch (error) {
+        console.error('Error al enviar programación de luces a Firebase:', error);
+        addAlert('Error al actualizar programación de luces', 'danger');
+    }
+}
+
+// Función para mostrar modal de programación de luces
+function showLightScheduleModal() {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para programar las luces', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('lightScheduleModal');
+    const errorDiv = document.getElementById('lightScheduleError');
+    
+    // Ocultar errores
+    errorDiv.style.display = 'none';
+    
+    // Cargar valores actuales en los inputs
+    updateLightScheduleUI();
+    
+    // Configurar event listeners para los radio buttons
+    setupLightScheduleEventListeners();
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+}
+
+// Función para cerrar modal de programación de luces
+function closeLightScheduleModal() {
+    const modal = document.getElementById('lightScheduleModal');
+    modal.style.display = 'none';
+}
+
+// Función para actualizar UI de programación de luces
+function updateLightScheduleUI() {
+    const modal = document.getElementById('lightScheduleModal');
+    if (modal.style.display !== 'block') return;
+    
+    // Actualizar radio buttons
+    const modeRadios = document.querySelectorAll('input[name="lightMode"]');
+    modeRadios.forEach(radio => {
+        radio.checked = radio.value === lightSchedule.mode;
+    });
+    
+    // Actualizar campos de horario
+    const startHour = String(lightSchedule.schedule.startHour).padStart(2, '0');
+    const startMin = String(lightSchedule.schedule.startMin).padStart(2, '0');
+    const endHour = String(lightSchedule.schedule.endHour).padStart(2, '0');
+    const endMin = String(lightSchedule.schedule.endMin).padStart(2, '0');
+    
+    document.getElementById('startTime').value = `${startHour}:${startMin}`;
+    document.getElementById('endTime').value = `${endHour}:${endMin}`;
+    
+    // Actualizar campos de ciclo
+    document.getElementById('onHours').value = lightSchedule.cycle.onHours;
+    document.getElementById('offHours').value = lightSchedule.cycle.offHours;
+    
+    // Mostrar/ocultar secciones según el modo
+    showLightScheduleSection(lightSchedule.mode);
+    
+    // Actualizar previews
+    updateSchedulePreview();
+    updateCyclePreview();
+}
+
+// Función para configurar event listeners
+function setupLightScheduleEventListeners() {
+    const modeRadios = document.querySelectorAll('input[name="lightMode"]');
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            showLightScheduleSection(this.value);
+        });
+    });
+    
+    // Event listeners para preview en tiempo real
+    document.getElementById('startTime').addEventListener('change', updateSchedulePreview);
+    document.getElementById('endTime').addEventListener('change', updateSchedulePreview);
+    document.getElementById('onHours').addEventListener('input', updateCyclePreview);
+    document.getElementById('offHours').addEventListener('input', updateCyclePreview);
+}
+
+// Función para mostrar/ocultar secciones según el modo
+function showLightScheduleSection(mode) {
+    const sections = ['manualConfig', 'scheduleConfig', 'cycleConfig'];
+    
+    sections.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        section.style.display = 'none';
+    });
+    
+    switch(mode) {
+        case 'manual':
+            document.getElementById('manualConfig').style.display = 'block';
+            break;
+        case 'schedule':
+            document.getElementById('scheduleConfig').style.display = 'block';
+            break;
+        case 'cycle':
+            document.getElementById('cycleConfig').style.display = 'block';
+            break;
+    }
+}
+
+// Función para actualizar preview de horario
+function updateSchedulePreview() {
+    const startTime = document.getElementById('startTime').value;
+    const endTime = document.getElementById('endTime').value;
+    
+    document.getElementById('previewStart').textContent = startTime;
+    document.getElementById('previewEnd').textContent = endTime;
+}
+
+// Función para actualizar preview de ciclo
+function updateCyclePreview() {
+    const onHours = parseInt(document.getElementById('onHours').value) || 0;
+    const offHours = parseInt(document.getElementById('offHours').value) || 0;
+    const totalHours = onHours + offHours;
+    
+    document.getElementById('previewOnHours').textContent = onHours;
+    document.getElementById('previewOffHours').textContent = offHours;
+    document.getElementById('previewTotalHours').textContent = totalHours;
+}
+
+// Función para validar programación de luces
+function validateLightSchedule(mode, scheduleData, cycleData) {
+    const errors = [];
+    
+    if (mode === 'schedule') {
+        const startTime = scheduleData.startHour * 60 + scheduleData.startMin;
+        const endTime = scheduleData.endHour * 60 + scheduleData.endMin;
+        
+        if (startTime === endTime) {
+            errors.push('La hora de encendido y apagado no pueden ser iguales');
+        }
+    }
+    
+    if (mode === 'cycle') {
+        if (cycleData.onHours < 1 || cycleData.onHours > 24) {
+            errors.push('Las horas de encendido deben estar entre 1 y 24');
+        }
+        if (cycleData.offHours < 1 || cycleData.offHours > 24) {
+            errors.push('Las horas de apagado deben estar entre 1 y 24');
+        }
+        if (cycleData.onHours + cycleData.offHours > 48) {
+            errors.push('El ciclo total no puede superar las 48 horas');
+        }
+    }
+    
+    return errors;
+}
+
+// Función para guardar programación de luces
+async function saveLightSchedule() {
+    const errorDiv = document.getElementById('lightScheduleError');
+    
+    // Obtener modo seleccionado
+    const selectedMode = document.querySelector('input[name="lightMode"]:checked').value;
+    
+    // Obtener datos de horario
+    const startTime = document.getElementById('startTime').value.split(':');
+    const endTime = document.getElementById('endTime').value.split(':');
+    const scheduleData = {
+        startHour: parseInt(startTime[0]),
+        startMin: parseInt(startTime[1]),
+        endHour: parseInt(endTime[0]),
+        endMin: parseInt(endTime[1])
+    };
+    
+    // Obtener datos de ciclo
+    const cycleData = {
+        onHours: parseInt(document.getElementById('onHours').value) || 12,
+        offHours: parseInt(document.getElementById('offHours').value) || 12
+    };
+    
+    // Validar datos
+    const errors = validateLightSchedule(selectedMode, scheduleData, cycleData);
+    if (errors.length > 0) {
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>${errors.join('<br>')}</span>
+        `;
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Ocultar errores
+    errorDiv.style.display = 'none';
+    
+    // Actualizar datos locales
+    lightSchedule.mode = selectedMode;
+    lightSchedule.schedule = scheduleData;
+    lightSchedule.cycle = cycleData;
+    
+    // Enviar a Firebase
+    await sendLightScheduleToFirebase();
+    
+    // Cerrar modal
+    closeLightScheduleModal();
+}
+
+// Función para restablecer programación de luces
+function resetLightSchedule() {
+    // Valores por defecto
+    document.querySelector('input[name="lightMode"][value="manual"]').checked = true;
+    document.getElementById('startTime').value = '08:00';
+    document.getElementById('endTime').value = '20:00';
+    document.getElementById('onHours').value = 12;
+    document.getElementById('offHours').value = 12;
+    
+    // Mostrar sección manual
+    showLightScheduleSection('manual');
+    
+    // Actualizar previews
+    updateSchedulePreview();
+    updateCyclePreview();
+    
+    // Ocultar errores
+    const errorDiv = document.getElementById('lightScheduleError');
+    errorDiv.style.display = 'none';
+}
+
 // Hacer funciones globales
 window.toggleAdminMode = toggleAdminMode;
 window.closeLoginModal = closeLoginModal;
 window.checkPassword = checkPassword;
+window.toggleControlMode = toggleControlMode;
+window.showRangesModal = showRangesModal;
+window.closeRangesModal = closeRangesModal;
+window.saveRanges = saveRanges;
+window.resetRanges = resetRanges;
+window.showLightScheduleModal = showLightScheduleModal;
+window.closeLightScheduleModal = closeLightScheduleModal;
+window.saveLightSchedule = saveLightSchedule;
+window.resetLightSchedule = resetLightSchedule;
