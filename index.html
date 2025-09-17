@@ -2,7 +2,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
   import { getDatabase, ref, onValue, set, push, serverTimestamp, query, orderByChild, limitToLast, get, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
-
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
   // Config de firebase
   const firebaseConfig = {
     apiKey: "AIzaSyB_hvYY0cOBxhhflW2OYs7M8S9tgXxFFJQ",
@@ -32,6 +32,10 @@
   window.limitToLast = limitToLast;
   window.get = get;
   window.remove = remove;
+  window.getAuth = getAuth;
+  window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+  window.signOut = signOut;
+  window.onAuthStateChanged = onAuthStateChanged;
 </script>
 
 <!DOCTYPE html>
@@ -388,8 +392,9 @@
                 <span class="close" onclick="closeLoginModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <p>Ingresa la contraseña para controlar los actuadores:</p>
+                <p>Ingresa email y contraseña para acceder al modo administrador:</p>
                 <div class="login-form">
+                    <input type="email" id="emailInput" placeholder="Email" autocomplete="off">
                     <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
                     <button onclick="checkPassword()" class="btn btn-primary">
                         <i class="fas fa-sign-in-alt"></i> Ingresar

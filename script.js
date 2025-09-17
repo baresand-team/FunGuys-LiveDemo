@@ -23,7 +23,7 @@ let actuators = {
 
 // Estado de autenticación
 let isAdmin = false;
-const ADMIN_PASSWORD = 'lucasputitolindo'; // Cambia esta contraseña por la que quieras
+let authUser = null;
 
 // Estado del modo de control
 let isAutoMode = true;
@@ -1094,30 +1094,54 @@ function closeLoginModal() {
 }
 
 // Función para verificar contraseña
-function checkPassword() {
+async function checkPassword() {
     const passwordInput = document.getElementById('passwordInput');
     const errorDiv = document.getElementById('loginError');
     const password = passwordInput.value.trim();
+    const emailInput = document.getElementById('emailInput');
+    const email = emailInput.value.trim();
     
-    if (password === ADMIN_PASSWORD) {
-        // Contraseña correcta
+    const auth = window.getAuth(window.app);
+    try {
+        const userCredential = await window.signInWithEmailAndPassword(auth, email, password);
+        authUser = userCredential.user;
         isAdmin = true;
         updateAdminUI();
         closeLoginModal();
         addAlert('Modo administrador activado', 'success');
-    } else {
-        // Contraseña incorrecta
+    } catch (error) {
         errorDiv.style.display = 'block';
         passwordInput.value = '';
         passwordInput.focus();
-        
-        // Agregar efecto de shake al modal
+        errorDiv.querySelector('span').textContent = 'Error de autenticación. Verifica tus credenciales.';
         const modalContent = document.querySelector('.modal-content');
         modalContent.style.animation = 'shake 0.5s ease-in-out';
         setTimeout(() => {
             modalContent.style.animation = '';
         }, 500);
     }
+    
+    
+    
+    // if (password === ADMIN_PASSWORD) {
+    //     // Contraseña correcta
+    //     isAdmin = true;
+    //     updateAdminUI();
+    //     closeLoginModal();
+    //     addAlert('Modo administrador activado', 'success');
+    // } else {
+    //     // Contraseña incorrecta
+    //     errorDiv.style.display = 'block';
+    //     passwordInput.value = '';
+    //     passwordInput.focus();
+        
+    //     // Agregar efecto de shake al modal
+    //     const modalContent = document.querySelector('.modal-content');
+    //     modalContent.style.animation = 'shake 0.5s ease-in-out';
+    //     setTimeout(() => {
+    //         modalContent.style.animation = '';
+    //     }, 500);
+    // }
 }
 
 // Función para actualizar la UI según el estado de admin
@@ -1148,6 +1172,18 @@ function updateAdminUI() {
 
 // Función para manejar Enter en el input de contraseña
 document.addEventListener('DOMContentLoaded', function() {
+    const auth = window.getAuth(window.app);
+    window.onAuthStateChanged(auth, (user) => {
+        if (user) {
+            isAdmin = true;
+            authUser = user;
+        } else {
+            isAdmin = false;
+            authUser = null;
+        }
+        updateAdminUI();
+    });
+
     const passwordInput = document.getElementById('passwordInput');
     if (passwordInput) {
         passwordInput.addEventListener('keypress', function(e) {
