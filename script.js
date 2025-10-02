@@ -847,6 +847,7 @@ function addAlert(message, type = 'info') {
 // Función para inicializar gráficos de tendencias
 function initializeCharts() {
     updateTrendCharts();
+    setupChartInteractivity();
 }
 
 // Función para actualizar gráficos de tendencias
@@ -861,6 +862,9 @@ function updateTrendCharts() {
     // Dibujar gráficos de tendencias
     drawTrendChart(tempCtx, historicalData.temperature, 'Temperatura (°C)', '#ff6b6b');
     drawTrendChart(humCtx, historicalData.humidity, 'Humedad (%)', '#74b9ff');
+    
+    // Reconfigurar interactividad después de actualizar
+    setupChartInteractivity();
 }
 
 // Función para dibujar gráficos de tendencias
@@ -917,6 +921,316 @@ function drawTrendChart(ctx, data, label, color) {
     ctx.fillStyle = color;
     data.forEach((point, index) => {
         const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+    
+    // Etiquetas
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    
+    // Etiqueta X
+    ctx.fillText('Tiempo (24h)', width / 2, height - 10);
+    
+    // Etiqueta Y
+    ctx.save();
+    ctx.translate(20, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+    
+    // Guardar datos para interactividad
+    ctx.chartData = data;
+    ctx.chartConfig = { minValue, maxValue, valueRange, padding, width, height, color, label };
+}
+
+// Variable global para el tooltip
+let chartTooltip = null;
+
+// Función para configurar interactividad de los gráficos
+function setupChartInteractivity() {
+    const tempCanvas = document.getElementById('tempTrendChart');
+    const humCanvas = document.getElementById('humTrendChart');
+    
+    console.log('Configurando interactividad de gráficos...');
+    console.log('Canvas temperatura encontrado:', !!tempCanvas);
+    console.log('Canvas humedad encontrado:', !!humCanvas);
+    
+    // Crear tooltip global si no existe
+    if (!chartTooltip) {
+        chartTooltip = document.createElement('div');
+        chartTooltip.className = 'chart-tooltip';
+        chartTooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            display: none;
+        `;
+        document.body.appendChild(chartTooltip);
+        console.log('Tooltip global creado');
+    }
+    
+    if (tempCanvas) {
+        setupCanvasInteractivity(tempCanvas);
+    }
+    if (humCanvas) {
+        setupCanvasInteractivity(humCanvas);
+    }
+}
+
+// Función para configurar interactividad de un canvas específico
+function setupCanvasInteractivity(canvas) {
+    const ctx = canvas.getContext('2d');
+    
+    // Verificar si ya tiene tooltip configurado
+    if (canvas.hasTooltip) return;
+    canvas.hasTooltip = true;
+    
+    console.log('Configurando interactividad para canvas:', canvas.id);
+    
+    // Función para encontrar el punto más cercano al mouse
+    function findNearestPoint(mouseX, mouseY) {
+        if (!ctx.chartData || !ctx.chartConfig) return null;
+        
+        const { chartData, chartConfig } = ctx;
+        const { padding, width, height, minValue, valueRange } = chartConfig;
+        
+        let nearestPoint = null;
+        let minDistance = Infinity;
+        
+        chartData.forEach((point, index) => {
+            const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
+            const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
+            
+            const distance = Math.sqrt(Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2));
+            
+            if (distance < minDistance && distance < 20) { // 20px de tolerancia
+                minDistance = distance;
+                nearestPoint = { point, x, y, index };
+            }
+        });
+        
+        return nearestPoint;
+    }
+    
+    // Event listeners
+    canvas.addEventListener('mousemove', (e) => {
+        if (!chartTooltip) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const nearestPoint = findNearestPoint(mouseX, mouseY);
+        
+        if (nearestPoint && ctx.chartData && ctx.chartConfig) {
+            const { point, x, y } = nearestPoint;
+            
+            const time = new Date(point.time);
+            const timeStr = time.toLocaleString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const unit = ctx.chartConfig.label.includes('Temperatura') ? '°C' : 
+                        ctx.chartConfig.label.includes('Humedad') ? '%' : '';
+            
+            chartTooltip.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 4px; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.3); padding-bottom: 4px;">${ctx.chartConfig.label}</div>
+                <div><strong style="color: #74b9ff;">Valor:</strong> ${point.value.toFixed(1)}${unit}</div>
+                <div><strong style="color: #74b9ff;">Hora:</strong> ${timeStr}</div>
+            `;
+            
+            // Posicionamiento robusto - convertir coordenadas del canvas a coordenadas de página
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;  // ya lo tenés
+            const mouseY = e.clientY - rect.top;   // ya lo tenés
+
+            // Convertir a coordenadas de página y posicionar el tooltip
+            const pageX = rect.left + window.scrollX + mouseX + 15;
+            const pageY = rect.top + window.scrollY + mouseY - 15;
+
+            chartTooltip.style.left = pageX + 'px';
+            chartTooltip.style.top = pageY + 'px';
+            chartTooltip.style.opacity = '1';
+            chartTooltip.style.display = 'block';
+            
+            // Resaltar punto en el gráfico
+            redrawChartWithHighlight(ctx, nearestPoint);
+        } else {
+            chartTooltip.style.opacity = '0';
+            chartTooltip.style.display = 'none';
+            // Redibujar sin resaltado
+            redrawChartWithoutHighlight(ctx);
+        }
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+        if (chartTooltip) {
+            chartTooltip.style.opacity = '0';
+            chartTooltip.style.display = 'none';
+        }
+        redrawChartWithoutHighlight(ctx);
+    });
+}
+
+// Función para redibujar el gráfico con un punto resaltado
+function redrawChartWithHighlight(ctx, nearestPoint) {
+    if (!ctx.chartData || !ctx.chartConfig) return;
+    
+    const { chartData, chartConfig } = ctx;
+    const { minValue, maxValue, valueRange, padding, width, height, color, label } = chartConfig;
+    
+    // Limpiar canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Dibujar ejes
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    
+    // Eje Y
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, height - padding);
+    ctx.stroke();
+    
+    // Eje X
+    ctx.beginPath();
+    ctx.moveTo(padding, height - padding);
+    ctx.lineTo(width - padding, height - padding);
+    ctx.stroke();
+    
+    // Dibujar línea de datos
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    chartData.forEach((point, index) => {
+        const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+    
+    // Dibujar puntos
+    ctx.fillStyle = color;
+    chartData.forEach((point, index) => {
+        const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+    
+    // Resaltar punto específico
+    if (nearestPoint) {
+        const { x, y } = nearestPoint;
+        
+        // Dibujar círculo exterior
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Dibujar círculo interior
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    
+    // Etiquetas
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    
+    // Etiqueta X
+    ctx.fillText('Tiempo (24h)', width / 2, height - 10);
+    
+    // Etiqueta Y
+    ctx.save();
+    ctx.translate(20, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+}
+
+// Función para redibujar el gráfico sin resaltado
+function redrawChartWithoutHighlight(ctx) {
+    if (!ctx.chartData || !ctx.chartConfig) return;
+    
+    const { chartData, chartConfig } = ctx;
+    const { minValue, maxValue, valueRange, padding, width, height, color, label } = chartConfig;
+    
+    // Limpiar canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Dibujar ejes
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    
+    // Eje Y
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, height - padding);
+    ctx.stroke();
+    
+    // Eje X
+    ctx.beginPath();
+    ctx.moveTo(padding, height - padding);
+    ctx.lineTo(width - padding, height - padding);
+    ctx.stroke();
+    
+    // Dibujar línea de datos
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    chartData.forEach((point, index) => {
+        const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
+        
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+    
+    // Dibujar puntos
+    ctx.fillStyle = color;
+    chartData.forEach((point, index) => {
+        const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
         const y = height - padding - ((point.value - minValue) / valueRange) * (height - 2 * padding);
         
         ctx.beginPath();
