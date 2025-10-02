@@ -115,9 +115,6 @@ const config = {
 
 ## 🔮 Próximas Mejoras
 
-- [ ] Integración con sensores reales via API
-- [ ] Base de datos para almacenamiento histórico
-- [ ] Notificaciones push
 - [ ] Modo oscuro
 - [ ] Exportación de datos en diferentes formatos
 - [ ] Dashboard administrativo
