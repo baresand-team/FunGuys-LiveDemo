@@ -1615,6 +1615,16 @@ function showLightScheduleModal() {
     // Configurar event listeners para los radio buttons
     setupLightScheduleEventListeners();
     
+    // Mostrar sección por defecto si no hay modo seleccionado
+    const selectedMode = document.querySelector('input[name="lightMode"]:checked');
+    if (selectedMode) {
+        showLightScheduleSection(selectedMode.value);
+    } else {
+        // Por defecto mostrar horario fijo
+        document.querySelector('input[name="lightMode"][value="schedule"]').checked = true;
+        showLightScheduleSection('schedule');
+    }
+    
     // Mostrar modal
     modal.style.display = 'block';
 }
@@ -1675,22 +1685,27 @@ function setupLightScheduleEventListeners() {
 
 // Función para mostrar/ocultar secciones según el modo
 function showLightScheduleSection(mode) {
-    const sections = ['manualConfig', 'scheduleConfig', 'cycleConfig'];
+    const sections = ['scheduleConfig', 'cycleConfig'];
     
     sections.forEach(sectionId => {
         const section = document.getElementById(sectionId);
-        section.style.display = 'none';
+        if (section) {
+            section.style.display = 'none';
+        }
     });
     
     switch(mode) {
-        case 'manual':
-            document.getElementById('manualConfig').style.display = 'block';
-            break;
         case 'schedule':
-            document.getElementById('scheduleConfig').style.display = 'block';
+            const scheduleSection = document.getElementById('scheduleConfig');
+            if (scheduleSection) {
+                scheduleSection.style.display = 'block';
+            }
             break;
         case 'cycle':
-            document.getElementById('cycleConfig').style.display = 'block';
+            const cycleSection = document.getElementById('cycleConfig');
+            if (cycleSection) {
+                cycleSection.style.display = 'block';
+            }
             break;
     }
 }
@@ -1795,14 +1810,14 @@ async function saveLightSchedule() {
 // Función para restablecer programación de luces
 function resetLightSchedule() {
     // Valores por defecto
-    document.querySelector('input[name="lightMode"][value="manual"]').checked = true;
+    document.querySelector('input[name="lightMode"][value="schedule"]').checked = true;
     document.getElementById('startTime').value = '08:00';
     document.getElementById('endTime').value = '20:00';
     document.getElementById('onHours').value = 12;
     document.getElementById('offHours').value = 12;
     
-    // Mostrar sección manual
-    showLightScheduleSection('manual');
+    // Mostrar sección de horario por defecto
+    showLightScheduleSection('schedule');
     
     // Actualizar previews
     updateSchedulePreview();
