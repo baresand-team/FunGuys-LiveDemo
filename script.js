@@ -72,6 +72,9 @@ async function initializeDashboard() {
     //generateInitialData();
     listenToFirebase();
     
+    // Configurar listener de estado de autenticación
+    setupAuthStateListener();
+    
     // Cargar datos históricos al inicializar
     await loadHistoricalData();
     
@@ -1106,30 +1109,108 @@ function closeLoginModal() {
 
 // Función para verificar contraseña
 async function checkPassword() {
-    const passwordInput = document.getElementById('passwordInput');
-    const errorDiv = document.getElementById('loginError');
-    const password = passwordInput.value.trim();
     const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const errorDiv = document.getElementById('loginError');    
     const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
     
-    const auth = window.getAuth(window.app);
+    if (!email || !password) {
+        showLoginError('Por favor ingresa email y contraseña');
+        return;
+    }
+    
     try {
-        const userCredential = await window.signInWithEmailAndPassword(auth, email, password);
-        authUser = userCredential.user;
+        // Intentar autenticar con Firebase Auth
+        await window.signInWithEmailAndPassword(window.auth, email, password);
+        
+        // Autenticación exitosa
         isAdmin = true;
         updateAdminUI();
         closeLoginModal();
         addAlert('Modo administrador activado', 'success');
-    } catch (error) {
-        errorDiv.style.display = 'block';
+        
+        // Limpiar campos
+        emailInput.value = '';
         passwordInput.value = '';
-        passwordInput.focus();
-        errorDiv.querySelector('span').textContent = 'Error de autenticación. Verifica tus credenciales.';
-        const modalContent = document.querySelector('.modal-content');
-        modalContent.style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => {
-            modalContent.style.animation = '';
-        }, 500);
+        errorDiv.style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error de autenticación:', error);
+        
+        let errorMessage = 'Error de autenticación';
+        switch (error.code) {
+            case 'auth/user-not-found':
+                errorMessage = 'Usuario no encontrado';
+                break;
+            case 'auth/wrong-password':
+                errorMessage = 'Contraseña incorrecta';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Email inválido';
+                break;
+            case 'auth/user-disabled':
+                errorMessage = 'Usuario deshabilitado';
+                break;
+            case 'auth/too-many-requests':
+                errorMessage = 'Demasiados intentos. Intenta más tarde';
+                break;
+            default:
+                errorMessage = 'Error de conexión';
+        }
+        
+        showLoginError(errorMessage);
+    }
+}
+
+function showLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    const errorSpan = errorDiv.querySelector('span');
+    
+    errorSpan.textContent = message;
+    errorDiv.style.display = 'block';
+    
+    // Limpiar campos
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+    
+    // Agregar efecto de shake al modal
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.style.animation = 'shake 0.5s ease-in-out';
+    setTimeout(() => {
+        modalContent.style.animation = '';
+    }, 500);
+}
+
+// Configurar listener de estado de autenticación
+function setupAuthStateListener() {
+    if (window.onAuthStateChanged && window.auth) {
+        window.onAuthStateChanged(window.auth, (user) => {
+            if (user) {
+                // Usuario autenticado
+                isAdmin = true;
+                updateAdminUI();
+                console.log('Usuario autenticado:', user.email);
+            } else {
+                // Usuario no autenticado
+                isAdmin = false;
+                updateAdminUI();
+                console.log('Usuario no autenticado');
+            }
+        });
+    }
+}
+
+// Función para cerrar sesión
+async function signOutUser() {
+    try {
+        await window.signOut(window.auth);
+        isAdmin = false;
+        updateAdminUI();
+        addAlert('Sesión cerrada', 'info');
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        addAlert('Error al cerrar sesión', 'error');
     }
     
     
@@ -1162,8 +1243,9 @@ function updateAdminUI() {
     
     if (isAdmin) {
         // Modo admin activado
-        adminToggle.textContent = '🔓 Modo Administrador';
+        adminToggle.innerHTML = '<i class="fas fa-user-shield"></i> Cerrar Sesión';
         adminToggle.classList.add('admin-active');
+        adminToggle.onclick = signOutUser;
         
         // Habilitar controles de actuadores
         actuatorCards.forEach(card => {
@@ -1171,8 +1253,9 @@ function updateAdminUI() {
         });
     } else {
         // Modo admin desactivado
-        adminToggle.textContent = '🔒 Modo Administrador';
+        adminToggle.innerHTML = '<i class="fas fa-user-shield"></i> Modo Administrador';
         adminToggle.classList.remove('admin-active');
+        adminToggle.onclick = toggleAdminMode;
         
         // Deshabilitar controles de actuadores
         actuatorCards.forEach(card => {
@@ -1181,21 +1264,19 @@ function updateAdminUI() {
     }
 }
 
-// Función para manejar Enter en el input de contraseña
+// Función para manejar Enter en los inputs de login
 document.addEventListener('DOMContentLoaded', function() {
-    const auth = window.getAuth(window.app);
-    window.onAuthStateChanged(auth, (user) => {
-        if (user) {
-            isAdmin = true;
-            authUser = user;
-        } else {
-            isAdmin = false;
-            authUser = null;
-        }
-        updateAdminUI();
-    });
-
+    const emailInput = document.getElementById('emailInput');
     const passwordInput = document.getElementById('passwordInput');
+    
+    if (emailInput) {
+        emailInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    }
+    
     if (passwordInput) {
         passwordInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
