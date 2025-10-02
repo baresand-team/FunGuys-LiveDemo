@@ -87,6 +87,9 @@ async function initializeDashboard() {
     // Cargar programación de luces desde Firebase
     await loadLightScheduleFromFirebase();
     
+    // Configurar eventos para override de luces
+    setupLightOverrideEvents();
+    
     updateSensorDisplays();
     updateActuatorDisplays();
     
@@ -744,36 +747,44 @@ function drawMiniChart(ctx, data, color) {
 // Función para actualizar las pantallas de actuadores
 function updateActuatorDisplays() {
     Object.keys(actuators).forEach(actuator => {
-        const card = document.getElementById(`${actuator}Card`);
-        const statusElement = document.getElementById(`${actuator}Status`);
-        const button = card.querySelector('button');
-        
-        if (actuators[actuator]) {
-            card.classList.add('active');
-            statusElement.textContent = 'Activado';
-            statusElement.style.color = '#27ae60';
-        } else {
-            card.classList.remove('active');
-            statusElement.textContent = 'Desactivado';
-            statusElement.style.color = '#7f8c8d';
+        // Saltar luces porque ahora tienen su propia sección
+        if (actuator === 'lighting') {
+            updateLightStatusDisplay();
+            return;
         }
         
-        // Deshabilitar controles en modo automático o si no es admin
-        if (isAutoMode || !isAdmin) {
-            card.classList.add('disabled');
-            if (button) {
-                button.disabled = true;
-                if (isAutoMode) {
-                    button.title = 'Controles deshabilitados en modo automático';
-                } else {
-                    button.title = 'Requiere modo administrador';
-                }
+        const card = document.getElementById(`${actuator}Card`);
+        const statusElement = document.getElementById(`${actuator}Status`);
+        const button = card && card.querySelector('button');
+        
+        if (card && statusElement) {
+            if (actuators[actuator]) {
+                card.classList.add('active');
+                statusElement.textContent = 'Activado';
+                statusElement.style.color = '#27ae60';
+            } else {
+                card.classList.remove('active');
+                statusElement.textContent = 'Desactivado';
+                statusElement.style.color = '#7f8c8d';
             }
-        } else {
-            card.classList.remove('disabled');
-            if (button) {
-                button.disabled = false;
-                button.title = 'Activar/Desactivar';
+            
+            // Deshabilitar controles en modo automático o si no es admin
+            if (isAutoMode || !isAdmin) {
+                card.classList.add('disabled');
+                if (button) {
+                    button.disabled = true;
+                    if (isAutoMode) {
+                        button.title = 'Controles deshabilitados en modo automático';
+                    } else {
+                        button.title = 'Requiere modo administrador';
+                    }
+                }
+            } else {
+                card.classList.remove('disabled');
+                if (button) {
+                    button.disabled = false;
+                    button.title = 'Activar/Desactivar';
+                }
             }
         }
     });
@@ -1734,3 +1745,231 @@ window.showLightScheduleModal = showLightScheduleModal;
 window.closeLightScheduleModal = closeLightScheduleModal;
 window.saveLightSchedule = saveLightSchedule;
 window.resetLightSchedule = resetLightSchedule;
+
+// ===== CONTROL DE LUCES CON OVERRIDE TEMPORAL =====
+
+// Variables globales para control de luces
+let currentLightSchedule = null;
+let lightOverrideActive = false;
+let lightOverrideRemaining = 0;
+
+// Función para activar override temporal de luces
+async function activateLightOverride(state) {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para usar override de luces', 'warning');
+        return;
+    }
+
+    const durationMinutes = getSelectedOverrideDuration();
+    if (!durationMinutes) {
+        addAlert('Selecciona una duración válida para el override', 'warning');
+        return;
+    }
+
+    try {
+        // Enviar comando de override a Firebase
+        const lightOverrideRef = window.ref(window.db, 'LightOverride');
+        await window.set(lightOverrideRef, {
+            activate: true,
+            state: state,
+            durationMinutes: durationMinutes,
+            timestamp: window.serverTimestamp()
+        });
+
+        const action = state ? 'encender' : 'apagar';
+        addAlert(`Override temporal activado: ${action} luces por ${durationMinutes} minutos`, 'success');
+        
+        // Actualizar UI inmediatamente
+        lightOverrideActive = true;
+        lightOverrideRemaining = durationMinutes * 60; // en segundos
+        updateLightOverrideUI();
+        
+    } catch (error) {
+        console.error('Error activating light override:', error);
+        addAlert('Error al activar override temporal', 'danger');
+    }
+}
+
+// Función para cancelar override temporal
+async function cancelLightOverride() {
+    if (!isAdmin) {
+        addAlert('Debes activar el modo administrador para cancelar override', 'warning');
+        return;
+    }
+
+    try {
+        // Cancelar override en Firebase (duración 0)
+        const lightOverrideRef = window.ref(window.db, 'LightOverride');
+        await window.set(lightOverrideRef, {
+            activate: true,
+            state: false,
+            durationMinutes: 0,
+            timestamp: window.serverTimestamp()
+        });
+
+        addAlert('Override temporal cancelado - Volviendo a programación automática', 'info');
+        
+        // Actualizar UI
+        lightOverrideActive = false;
+        lightOverrideRemaining = 0;
+        updateLightOverrideUI();
+        
+    } catch (error) {
+        console.error('Error canceling light override:', error);
+        addAlert('Error al cancelar override', 'danger');
+    }
+}
+
+// Función para obtener duración seleccionada del override
+function getSelectedOverrideDuration() {
+    const selected = document.querySelector('input[name="overrideDuration"]:checked');
+    if (!selected) return null;
+    
+    if (selected.value === 'custom') {
+        const customMinutes = document.getElementById('customMinutes').value;
+        return parseInt(customMinutes) || null;
+    }
+    
+    return parseInt(selected.value);
+}
+
+// Función para actualizar UI del override
+function updateLightOverrideUI() {
+    const activeOverrideDisplay = document.getElementById('activeOverrideDisplay');
+    const overrideOnBtn = document.getElementById('overrideOnBtn');
+    const overrideOffBtn = document.getElementById('overrideOffBtn');
+    
+    if (lightOverrideActive && lightOverrideRemaining > 0) {
+        activeOverrideDisplay.style.display = 'block';
+        overrideOnBtn.disabled = true;
+        overrideOffBtn.disabled = true;
+        
+        // Actualizar información del override activo
+        const activeOverrideState = document.getElementById('activeOverrideState');
+        const activeOverrideTime = document.getElementById('activeOverrideTime');
+        
+        // Aquí necesitaríamos leer el estado actual desde Firebase o sensores
+        // activeOverrideState.textContent = state ? 'ENCENDIDO' : 'APAGADO';
+        
+        const minutes = Math.floor(lightOverrideRemaining / 60);
+        const seconds = lightOverrideRemaining % 60;
+        activeOverrideTime.textContent = `${minutes}m ${seconds}s`;
+        
+    } else {
+        activeOverrideDisplay.style.display = 'none';
+        overrideOnBtn.disabled = false;
+        overrideOffBtn.disabled = false;
+    }
+}
+
+// Función para actualizar estado actual de luces
+function updateLightStatusDisplay() {
+    const lightStateIndicator = document.getElementById('lightStateIndicator');
+    const lightStateIcon = document.getElementById('lightStateIcon');
+    const lightStateText = document.getElementById('lightStateText');
+    const lightModeText = document.getElementById('lightModeText');
+    
+    // Obtener estado actual de las luces desde los actuadores
+    const isLightOn = actuators.lighting || false;
+    
+    // Actualizar indicador visual
+    if (isLightOn) {
+        lightStateIndicator.classList.add('light-on');
+        lightStateIndicator.classList.remove('light-off');
+        lightStateIcon.className = 'fas fa-lightbulb light-on-icon';
+        lightStateText.textContent = 'ENCENDIDO';
+    } else {
+        lightStateIndicator.classList.add('light-off');
+        lightStateIndicator.classList.remove('light-on');
+        lightStateIcon.className = 'fas fa-lightbulb light-off-icon';
+        lightStateText.textContent = 'APAGADO';
+    }
+    
+    // Actualizar modo
+    let modeText = 'Modo: ';
+    if (lightOverrideActive) {
+        modeText += 'Override Temporal';
+    } else if (currentLightSchedule) {
+        modeText += currentLightSchedule.mode === 'cycle' ? 'Ciclo Automático' : 'Horario Fijo';
+    } else {
+        modeText += 'Automático';
+    }
+    lightModeText.textContent = modeText;
+}
+
+// Función para mostrar programación actual
+function updateCurrentScheduleDisplay() {
+    const currentScheduleDisplay = document.getElementById('currentScheduleDisplay');
+    
+    if (!currentLightSchedule) {
+        currentScheduleDisplay.innerHTML = '<i class="fas fa-sync-alt"></i> <span>Cargando programación...</span>';
+        return;
+    }
+    
+    let scheduleText = '';
+    let icon = '';
+    
+    if (currentLightSchedule.mode === 'cycle') {
+        const onHours = currentLightSchedule.cycle?.onHours || 12;
+        const offHours = currentLightSchedule.cycle?.offHours || 12;
+        icon = '<i class="fas fa-sync-alt"></i>';
+        scheduleText = `Ciclo: ${onHours}h ON, ${offHours}h OFF`;
+    } else if (currentLightSchedule.mode === 'schedule') {
+        const start = `${String(currentLightSchedule.schedule?.startHour || 8).padStart(2, '0')}:${String(currentLightSchedule.schedule?.startMin || 0).padStart(2, '0')}`;
+        const end = `${String(currentLightSchedule.schedule?.endHour || 20).padStart(2, '0')}:${String(currentLightSchedule.schedule?.endMin || 0).padStart(2, '0')}`;
+        icon = '<i class="fas fa-calendar-alt"></i>';
+        scheduleText = `Horario: ${start} a ${end}`;
+    }
+    
+    currentScheduleDisplay.innerHTML = `${icon} <span>${scheduleText}</span>`;
+}
+
+// Función para leer programación de luces desde Firebase
+async function loadLightScheduleFromFirebase() {
+    try {
+        const lightScheduleRef = window.ref(window.db, 'LightSchedule');
+        const snapshot = await window.get(lightScheduleRef);
+        
+        if (snapshot.exists()) {
+            currentLightSchedule = snapshot.val();
+            updateCurrentScheduleDisplay();
+        }
+    } catch (error) {
+        console.error('Error loading light schedule:', error);
+    }
+}
+
+// Función para configurar eventos de override de luces
+function setupLightOverrideEvents() {
+    const durationRadios = document.querySelectorAll('input[name="overrideDuration"]');
+    const customDurationInput = document.getElementById('customDurationInput');
+    
+    if (durationRadios.length > 0 && customDurationInput) {
+        durationRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDurationInput.style.display = 'block';
+                } else {
+                    customDurationInput.style.display = 'none';
+                }
+            });
+        });
+    }
+}
+
+// Timer para countdown del override
+setInterval(() => {
+    if (lightOverrideActive && lightOverrideRemaining > 0) {
+        lightOverrideRemaining--;
+        updateLightOverrideUI();
+        
+        if (lightOverrideRemaining <= 0) {
+            lightOverrideActive = false;
+            addAlert('Override temporal expirado - Volviendo a programación automática', 'info');
+        }
+    }
+}, 1000);
+
+// Exponer funciones al scope global
+window.activateLightOverride = activateLightOverride;
+window.cancelLightOverride = cancelLightOverride;

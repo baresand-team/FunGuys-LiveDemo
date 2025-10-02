@@ -1580,3 +1580,414 @@ canvas {
         padding: 1rem;
     }
 }
+
+/* ===== ESTILOS PARA CONTROL DE LUCES CON OVERRIDE TEMPORAL ===== */
+
+.lighting-control-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.lighting-header {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.lighting-header h2 {
+    color: #2c3e50;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.lighting-header h2 i {
+    color: #f39c12;
+    margin-right: 12px;
+}
+
+.lighting-description {
+    color: #7f8c8d;
+    font-size: 1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.lighting-description i {
+    color: #3498db;
+}
+
+.lighting-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-top: 25px;
+}
+
+/* Cards individuales */
+.lighting-status-card,
+.lighting-schedule-card,
+.lighting-override-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.lighting-status-card:hover,
+.lighting-schedule-card:hover,
+.lighting-override-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Headers de las cards */
+.status-header h3,
+.schedule-header h3,
+.override-header h3 {
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-header i {
+    color: #3498db;
+}
+
+.schedule-header i {
+    color: #27ae60;
+}
+
+.override-header i {
+    color: #e74c3c;
+}
+
+/* Estado actual de luces */
+.status-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.current-state {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.state-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.state-indicator.light-on {
+    background: linear-gradient(135deg, #fff8dc 0%, #fffacd 100%);
+    border: 2px solid #ffd700;
+    color: #b8860b;
+}
+
+.state-indicator.light-off {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    border: 2px solid #bdc3c7;
+    color: #7f8c8d;
+}
+
+.light-on-icon {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.light-off-icon {
+    color: #95a5a6;
+}
+
+.state-mode {
+    color: #7f8c8d;
+    font-size: 0.95rem;
+    font-style: italic;
+}
+
+.next-change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #34495e;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 8px;
+}
+
+.next-change i {
+    color: #3498db;
+}
+
+/* Programación actual */
+.schedule-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.current-schedule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+    border-left: 4px solid #27ae60;
+    border-radius: 8px;
+    font-weight: 500;
+    color: #27ae60;
+}
+
+/* Override temporal */
+.override-header p {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin: 8px 0 0 0;
+    font-weight: normal;
+}
+
+.override-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.duration-selector label {
+    display: block;
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.duration-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.duration-option {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: rgba(52, 152, 219, 0.1);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #3498db;
+}
+
+.duration-option:hover {
+    background: rgba(52, 152, 219, 0.2);
+    transform: translateY(-1px);
+}
+
+.duration-option input[type="radio"] {
+    display: none;
+}
+
+.duration-option input[type="radio"]:checked + span {
+    font-weight: 600;
+}
+
+.duration-option:has(input[type="radio"]:checked) {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border-color: #2980b9;
+}
+
+.custom-duration {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(155, 89, 182, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.custom-duration input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.custom-duration span {
+    color: #9b59b6;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.override-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.btn-override-on,
+.btn-override-off {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.btn-override-on {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+.btn-override-on:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+}
+
+.btn-override-off {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(52, 73, 94, 0.3);
+}
+
+.btn-override-off:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 73, 94, 0.4);
+}
+
+.btn-override-on:disabled,
+.btn-override-off:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Override activo */
+.active-override {
+    padding: 15px;
+    background: linear-gradient(135deg, #fff3cd 0%, #fef8e7 100%);
+    border: 2px solid #ffc107;
+    border-radius: 10px;
+    animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+.override-info,
+.override-remaining {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #856404;
+    font-weight: 500;
+}
+
+.override-info i,
+.override-remaining i {
+    color: #ffc107;
+}
+
+.btn-cancel-override {
+    width: 100%;
+    padding: 10px 15px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-cancel-override:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    transform: translateY(-1px);
+}
+
+/* Responsive para control de luces */
+@media (max-width: 768px) {
+    .lighting-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .duration-options {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .override-actions {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .lighting-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .lighting-description {
+        flex-direction: column;
+        text-align: center;
+        gap: 5px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lighting-control-section {
+        padding: 20px 15px;
+    }
+    
+    .duration-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .duration-option {
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+}

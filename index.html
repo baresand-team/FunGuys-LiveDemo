@@ -169,16 +169,122 @@
                         </div>
                     </div>
 
-                    <div class="actuator-card" id="lightingCard">
-                        <div class="actuator-header">
-                            <i class="fas fa-lightbulb"></i>
-                            <h3>Iluminación</h3>
+                    <!-- LUCES REMOVIDAS DEL CONTROL MANUAL - Ahora tienen su propia sección -->
+                </div>
+            </section>
+
+            <!-- Control de Iluminación -->
+            <section class="lighting-control-section">
+                <div class="lighting-header">
+                    <h2><i class="fas fa-lightbulb"></i> Control de Iluminación</h2>
+                    <p class="lighting-description">
+                        <i class="fas fa-info-circle"></i> 
+                        Las luces funcionan <strong>siempre automáticamente</strong> según su programación. 
+                        Puedes realizar overrides temporales cuando sea necesario.
+                    </p>
+                </div>
+                
+                <div class="lighting-content">
+                    <!-- Estado Actual -->
+                    <div class="lighting-status-card">
+                        <div class="status-header">
+                            <h3><i class="fas fa-eye"></i> Estado Actual</h3>
                         </div>
-                        <div class="actuator-status" id="lightingStatus">Desactivado</div>
-                        <div class="actuator-controls">
-                            <button class="btn btn-primary" onclick="toggleActuator('lighting')">
-                                Activar/Desactivar
+                        <div class="status-content">
+                            <div class="current-state">
+                                <div class="state-indicator" id="lightStateIndicator">
+                                    <i class="fas fa-lightbulb" id="lightStateIcon"></i>
+                                    <span id="lightStateText">Cargando...</span>
+                                </div>
+                                <div class="state-mode">
+                                    <span id="lightModeText">Modo: Cargando...</span>
+                                </div>
+                            </div>
+                            <div class="next-change" id="nextLightChange">
+                                <i class="fas fa-clock"></i>
+                                <span>Próximo cambio: Calculando...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuración de Programación -->
+                    <div class="lighting-schedule-card">
+                        <div class="schedule-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Programación Automática</h3>
+                        </div>
+                        <div class="schedule-content">
+                            <div class="current-schedule" id="currentScheduleDisplay">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Cargando programación...</span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="showLightScheduleModal()">
+                                <i class="fas fa-cog"></i> Configurar Programación
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Override Temporal -->
+                    <div class="lighting-override-card">
+                        <div class="override-header">
+                            <h3><i class="fas fa-bolt"></i> Override Temporal</h3>
+                            <p>Forzar un estado por tiempo limitado, luego volver a la programación automática</p>
+                        </div>
+                        <div class="override-content">
+                            <!-- Duración del Override -->
+                            <div class="duration-selector">
+                                <label>Duración del Override:</label>
+                                <div class="duration-options">
+                                    <label class="duration-option">
+                                        <input type="radio" name="overrideDuration" value="15" checked>
+                                        <span>15 min</span>
+                                    </label>
+                                    <label class="duration-option">
+                                        <input type="radio" name="overrideDuration" value="30">
+                                        <span>30 min</span>
+                                    </label>
+                                    <label class="duration-option">
+                                        <input type="radio" name="overrideDuration" value="60">
+                                        <span>1 hora</span>
+                                    </label>
+                                    <label class="duration-option">
+                                        <input type="radio" name="overrideDuration" value="120">
+                                        <span>2 horas</span>
+                                    </label>
+                                    <label class="duration-option">
+                                        <input type="radio" name="overrideDuration" value="custom">
+                                        <span>Custom</span>
+                                    </label>
+                                </div>
+                                <div class="custom-duration" id="customDurationInput" style="display: none;">
+                                    <input type="number" id="customMinutes" min="1" max="1440" value="60" placeholder="Minutos">
+                                    <span>minutos</span>
+                                </div>
+                            </div>
+
+                            <!-- Botones de Override -->
+                            <div class="override-actions">
+                                <button class="btn btn-override-on" id="overrideOnBtn" onclick="activateLightOverride(true)">
+                                    <i class="fas fa-sun"></i> Encender Ahora
+                                </button>
+                                <button class="btn btn-override-off" id="overrideOffBtn" onclick="activateLightOverride(false)">
+                                    <i class="fas fa-moon"></i> Apagar Ahora
+                                </button>
+                            </div>
+
+                            <!-- Estado del Override Activo -->
+                            <div class="active-override" id="activeOverrideDisplay" style="display: none;">
+                                <div class="override-info">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Override activo: <strong id="activeOverrideState">--</strong></span>
+                                </div>
+                                <div class="override-remaining">
+                                    <i class="fas fa-hourglass-half"></i>
+                                    <span>Tiempo restante: <strong id="activeOverrideTime">--</strong></span>
+                                </div>
+                                <button class="btn btn-cancel-override" onclick="cancelLightOverride()">
+                                    <i class="fas fa-times"></i> Cancelar Override
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -296,13 +402,7 @@
                         <h3><i class="fas fa-lightbulb"></i> Modo de Control</h3>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="lightMode" value="manual" checked>
-                                <span class="radio-label">
-                                    <i class="fas fa-hand-paper"></i> Manual - Control desde web
-                                </span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="lightMode" value="schedule">
+                                <input type="radio" name="lightMode" value="schedule" checked>
                                 <span class="radio-label">
                                     <i class="fas fa-calendar-alt"></i> Horario Fijo - Encender/apagar a horas específicas
                                 </span>
@@ -356,15 +456,6 @@
                         </div>
                     </div>
 
-                    <!-- Configuración Manual -->
-                    <div id="manualConfig" class="config-section">
-                        <h3><i class="fas fa-hand-paper"></i> Control Manual</h3>
-                        <p class="manual-description">
-                            <i class="fas fa-info-circle"></i> 
-                            En modo manual, puedes controlar las luces directamente desde los botones de actuadores.
-                            No se aplicará ninguna programación automática.
-                        </p>
-                    </div>
                 </div>
                 
                 <div class="modal-actions">
